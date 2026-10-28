@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101・T102 完了（T101 までコミット済み `cc43823`、T102 は未コミット）。次は T103
+更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T103 完了（T102 までコミット済み `7eb1be6`、T103 は未コミット）。次は T104
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -11,7 +11,9 @@
 - T008: `Assets/InputSystem_Actions.inputactions` の `Game` マップ（テンプレートの Player/UI は残す）。キーボードは plan 3章どおり、マウスは Point/Press/Cancel。アイコン・レバー・ストップボタンは uGUI クリック（UI マップ）。Esc は Cancel と Pause の両方に割り当て済みで、配置操作中かどうかの切り分けは実装側で行う。Shift+数字（強化）と数字（召喚選択）は同じキーを使うので、実装時に Shift 押下中は召喚選択を無視する。C# ラッパーは未生成（`generateWrapperCode: 0`）。
 - T101（スロットのデータ）: `Core/Slot/` に図柄・ライン（T/M/B/D1/D2）・リール・配当表・ルール。リール配列は上から下の順、停止位置 s は中段の添字（上段 s-1、下段 s+1、21で循環）。左リールは [BELL REPLAY WATERMELON CHERRY]×5＋SEVEN、中・右は3種サイクル×5＋7/BAR 6個（`slot_reels.csv` は `Gen-Reels` 相当のスクリプトで作ったが、以後は CSV を直接編集してよい）。ベル・リプレイ・スイカは各リールで間隔5以内、左のチェリーも5以内＝中段1ラインだけで必ず引き込める設計。7 は目押しが必要な間隔。配当・確率は仮値。
 - T102（内部抽選）: `slot_probabilities.csv`（role,setting,state,probability。state は normal/kakuhen/bonus、role は `+` で重複当選、ハズレ `NONE` は書かず残り確率）。`SlotProbabilityTable.Draw(setting, state, GameRandom)` が `SlotFlag`（`Bonus`/`Small`）を返す。生成元スクリプトは一時的なもので、以後は CSV を直接編集してよい。ボーナス持ち越し中の抽選スキップは T105 で扱う。
-- 次の一手: T103（目押しのリール制御: 最大4コマ滑り、成立役の引き込み、非成立役の蹴飛ばし）。全フラグ×全停止位置の全数検査（AC-041）で、ブランクなしの配列で「ハズレ」を出せるかも初めて分かる。崩れたら `slot_reels.csv` を直す。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T103（リール制御）: `SlotReelController`。`Evaluate(s0,s1,s2)` が揃った役のビット（payouts の並び順）、`Decide(flag, s0,s1,s2, reel, press)` が停止位置（回転中は `Unstopped`=-1）。停止位置は press から最大 `MaxSlip` コマ先。小役・リプレイは必ず揃え、非成立役は揃えず、ボーナスは目押しが合うときだけ（狙える手を優先）。リール配列を変えたら `SlotReelControlTests` の全数検査（約1分）で再確認する。配列が安全でないときは `Tools/UnitySlotTower/Slot/Search Reel Layout`（`SlotReelOptimizer`、結果は `Artifacts/Automation/reels-candidate.csv`、Editor は探索中も応答する）で入れ替え探索ができる。現在の `slot_reels.csv` は探索結果で、左リールは [BELL REPLAY WATERMELON CHERRY]×5＋SEVEN のまま、中・右は並びを入れ替えた（T101 の「3種サイクル」ではなくなった）。
+- T103 の設計判断: 小役との重複当選（WATERMELON+BIG など）は、同じ窓に両方の図柄が入らない限りボーナスが同時には揃わない＝ボーナスは持ち越しになる（T105 で扱う）。
+- 次の一手: T104（ベット＋レバー、コイン不足時の拒否、リプレイ、払い出し。`Evaluate` の結果と `slot_payouts.csv` の払い出しを使う）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
