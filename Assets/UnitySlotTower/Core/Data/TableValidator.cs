@@ -13,7 +13,7 @@ namespace UnitySlotTower.Core.Data
             { TableSet.UnitRangesFile, new[] { "unit_id", "dx", "dy" } },
             { TableSet.UnitUpgradesFile, new[] { "unit_id", "level", "hp_mult", "atk_mult", "def_mult", "cost" } },
             { TableSet.EnemiesFile, new[] { "id", "kind", "max_hp", "atk", "def", "attack_interval", "move_speed", "range", "is_air", "block_cost", "life_damage", "drop_chance", "drop_min", "drop_max" } },
-            { TableSet.MapPathsFile, new[] { "map_id", "path_id", "order", "x", "y" } },
+            { TableSet.MapPathsFile, new[] { "map_id", "path_id", "order", "x", "y", "kind" } },
             { TableSet.WavesFile, new[] { "wave", "time", "enemy_id", "spawn", "path_id", "is_boss" } },
             { TableSet.SlotReelsFile, new[] { "reel", "position", "symbol" } },
             { TableSet.SlotPayoutsFile, new[] { "role", "symbols", "lines", "payout", "kind" } },
@@ -38,6 +38,7 @@ namespace UnitySlotTower.Core.Data
             var slotRules = tables.SlotRules;
             var slotProbabilities = tables.SlotProbabilities;
             var slotPremonition = tables.SlotPremonition;
+            var maps = tables.Maps;
             var config = tables.GameConfig;
             if (config.Bet > config.InitialCoins && config.InitialCoins > 0)
                 throw new CsvException(TableSet.GameConfigFile, 0, "value", "掛け金が初期コインを超えています");

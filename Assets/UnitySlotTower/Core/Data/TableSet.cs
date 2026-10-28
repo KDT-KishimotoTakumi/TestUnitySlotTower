@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnitySlotTower.Core.Csv;
+using UnitySlotTower.Core.Map;
 using UnitySlotTower.Core.Slot;
 
 namespace UnitySlotTower.Core.Data
@@ -27,19 +29,25 @@ namespace UnitySlotTower.Core.Data
             SlotReelsFile, SlotPayoutsFile, SlotProbabilitiesFile, SlotRulesFile, SlotPremonitionFile,
         };
 
+        /// <summary>マップのグリッド（Tables からの相対パス）。ファイル名（拡張子なし）がマップ ID。</summary>
+        public static readonly IReadOnlyList<string> MapFiles = new[] { "maps/w1.csv" };
+
         private readonly Dictionary<string, CsvTable> tables = new Dictionary<string, CsvTable>();
 
-        /// <summary>readText は CSV ファイル名を受け取り、内容を返す。</summary>
+        /// <summary>readText は CSV ファイル名（マップは "maps/w1.csv"）を受け取り、内容を返す。</summary>
         public static TableSet Load(Func<string, string> readText)
         {
             var set = new TableSet();
-            foreach (var file in AllFiles)
-            {
-                var text = readText(file);
-                if (text == null) throw new CsvException(file, 0, null, "ファイルが見つかりません");
-                set.tables[file] = CsvParser.Parse(file, text);
-            }
+            foreach (var file in AllFiles) set.LoadFile(file, readText);
+            foreach (var file in MapFiles) set.LoadFile(file, readText);
             return set;
+        }
+
+        private void LoadFile(string file, Func<string, string> readText)
+        {
+            var text = readText(file);
+            if (text == null) throw new CsvException(file, 0, null, "ファイルが見つかりません");
+            tables[file] = CsvParser.Parse(file, text);
         }
 
         public CsvTable Get(string file) => tables[file];
@@ -52,6 +60,29 @@ namespace UnitySlotTower.Core.Data
 
         public SlotProbabilityTable SlotProbabilities =>
             SlotProbabilityTable.FromTable(Get(SlotProbabilitiesFile), SlotPayouts);
+
+        /// <summary>グリッドと経路を読み直して返す（呼ぶたびに作り直す）。</summary>
+        public IReadOnlyList<MapData> Maps
+        {
+            get
+            {
+                var maps = new List<MapData>(MapFiles.Count);
+                var pathTable = Get(MapPathsFile);
+                foreach (var file in MapFiles)
+                {
+                    var map = MapData.FromGridTable(Path.GetFileNameWithoutExtension(file), Get(file));
+                    map.AddPaths(pathTable);
+                    maps.Add(map);
+                }
+                foreach (var row in pathTable.Rows)
+                {
+                    var mapId = row.GetString(MapData.PathMapIdColumn);
+                    if (!maps.Exists(m => m.Id == mapId))
+                        throw row.Error(MapData.PathMapIdColumn, $"マップ '{mapId}' のグリッドがありません");
+                }
+                return maps;
+            }
+        }
 
         public SlotRules SlotRules => SlotRules.FromTable(Get(SlotRulesFile));
 

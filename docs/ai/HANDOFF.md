@@ -20,7 +20,10 @@
 - T108（先バレ）: `slot_premonition.csv`（role,rate。役名か NONE＝ガセ、重複当選は最大の率）。`SlotMachine.Premonition` がレバーオン時の抽選結果（次のレバーまで保持）。ボーナス持ち越し中は新しく当たった小役だけで判定。先バレの抽選は乱数を1回使うので、それ以前の乱数列とは変わっている（テストは範囲で見ているので影響なし）。率は仮値。
 - T109（機械割）: `SlotRateCalculator.Calculate(tables, setting)` が理論機械割と BIG/REG の1ゲームあたり開始数を返す（機械割＝払い出し÷投入、リプレイは掛け金の払い戻し扱い、ボーナスは当選ゲームで揃う前提）。`SlotMachine.PlayInstant()` は理想の目押しで即座に1ゲーム進めるシミュレーション用。`slot_probabilities.csv` の BIG/REG を含む行（通常・確変）を `Tools/UnitySlotTower/Slot/Tune Bonus Rates` で設定ごとに倍率調整済み（目標 100/104/108/112/118/125% に一致）。確率や配当を変えたら `Report Machine Rates` で確認し、目標に戻すなら `Tune Bonus Rates` を再実行する（BIG/REG 行だけが書き換わる）。`SlotRateTests` が目標との差・理論値と実測の差を検査する（約25秒）。実行は `editor menu "<メニュー名>"`（Invoke-UnityMcp.ps1 経由）。
 - T110（筐体の仮表示、未コミット）: `Runtime/SlotCabinetView`（`SlotMachine`/`Wallet` を内部で作る暫定構成、`SimClock` 1/60 秒で Tick、uGUI クリック＋Space/J/K/L）、`SlotReelView`（25コマ帯）、`ToneSynth`（コード生成の仮音）。筐体は `GameSceneBuilder` が生成（`Game.unity` 再生成済み）。設定は `[SerializeField] setting = 1` の暫定で、難易度選択との接続と Wallet 統合は T301。ハーネス8件・EditMode 106件成功、レビュー指摘なし。未確認: 先バレのランプ・音、コイン不足の点滅、実際のキー/クリック、目押し。コミット時は新規 `.cs` 3本の `.meta` を含め、`DigitsSDF.asset` の既存差分は含めない。
-- 次の一手: プレイヤーによる T110 の手動確認（目押し・先バレ）→ 問題なければ T110 を完了にしてコミット → T111 以降（M1 の締め）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T110 はコミット済み（`fa7e292`）だが手動確認待ちのため tasks.md は未完了のまま。
+- T201（マップ）: `Core/Map/MapData`（グリッド＋経路、`TableSet.Maps` は呼ぶたび作り直すのでループ内で呼ばない）、`Runtime/BattleFieldView`（Awake で生成するグレーボックス）。`TableSet.MapFiles` に "maps/w1.csv"。w2 以降は MapFiles に足してビルダーを再実行。`PresentationCatalog.ReadTable` はファイル名のみで照合するので `maps/` と `AllFiles` で同名を作らない。マップ記号は G/H/X/S1〜/E、`map_paths.csv` の `kind` は ground/air。地上経路は H も不可。旧 `Art/Materials/FieldPlaceholder.mat` は孤児（Editor 経由で削除可）。
+- Reload Domain 無効（`ProjectSettings/EditorSettings.asset`）のため、`InputActionAsset` に null コールバックが残ると次の Play から NRE が出る。MonoBehaviour の OnEnable で購読するコールバックは Awake の失敗しうる処理より前に作る（`SlotCabinetView` はそうした）。すでに汚れたら `RequestScriptReload` かスクリプト再コンパイルで直る。
+- 次の一手: プレイヤーによる T110 の手動確認（目押し・先バレ）。並行して T202（`units.csv` と召喚）以降の M2 を進める。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）

@@ -20,19 +20,22 @@ namespace UnitySlotTower.EditorTools
         private const string ScenePath = "Assets/UnitySlotTower/Scenes/Game.unity";
         private const string CatalogPath = "Assets/UnitySlotTower/Data/PresentationCatalog.asset";
         private const string TablesFolder = "Assets/UnitySlotTower/Data/Tables";
-        private const string MaterialPath = "Assets/UnitySlotTower/Art/Materials/FieldPlaceholder.mat";
+        private const string FieldMaterialFolder = "Assets/UnitySlotTower/Art/Materials";
 
         private const float CameraDistance = 11f;
         private const float CameraFieldOfView = 40f;
-        private const float FieldWidthCells = 9f;
-        private const float FieldHeightCells = 6f;
-        private const float PlaneSize = 10f;
 
         private static readonly Color BackdropColor = Color.black;
         private static readonly Color BattleBackground = new Color(0.12f, 0.14f, 0.18f);
         private static readonly Color OperationBarColor = new Color(0.16f, 0.2f, 0.3f);
         private static readonly Color SlotAreaColor = new Color(0.35f, 0.08f, 0.1f);
-        private static readonly Color FieldColor = new Color(0.35f, 0.45f, 0.3f);
+        private static readonly Color FieldGroundColor = new Color(0.35f, 0.45f, 0.3f);
+        private static readonly Color FieldHighColor = new Color(0.6f, 0.5f, 0.3f);
+        private static readonly Color FieldBlockedColor = new Color(0.25f, 0.25f, 0.28f);
+        private static readonly Color FieldSpawnColor = new Color(0.85f, 0.2f, 0.2f);
+        private static readonly Color FieldGoalColor = new Color(0.2f, 0.45f, 0.95f);
+        private static readonly Color FieldGroundPathColor = new Color(0.95f, 0.85f, 0.35f);
+        private static readonly Color FieldAirPathColor = new Color(0.4f, 0.9f, 1f);
         private static readonly Color PanelColor = new Color(0.05f, 0.04f, 0.05f);
         private static readonly Color PaylineColor = new Color(1f, 0.2f, 0.2f, 0.6f);
         private static readonly Color DisplayTextColor = new Color(1f, 0.85f, 0.2f);
@@ -74,7 +77,7 @@ namespace UnitySlotTower.EditorTools
             CreateSlotCabinet(slotArea, catalog);
             CreateBattleCamera(battleArea);
             CreateLight();
-            CreateField();
+            CreateField(catalog);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -95,10 +98,14 @@ namespace UnitySlotTower.EditorTools
 
             var serialized = new SerializedObject(catalog);
             var list = serialized.FindProperty("tables");
-            list.arraySize = TableSet.AllFiles.Count;
-            for (var i = 0; i < TableSet.AllFiles.Count; i++)
+            var count = TableSet.AllFiles.Count;
+            list.arraySize = count + TableSet.MapFiles.Count;
+            for (var i = 0; i < list.arraySize; i++)
+            {
+                var file = i < count ? TableSet.AllFiles[i] : TableSet.MapFiles[i - count];
                 list.GetArrayElementAtIndex(i).objectReferenceValue =
-                    AssetDatabase.LoadAssetAtPath<TextAsset>($"{TablesFolder}/{TableSet.AllFiles[i]}");
+                    AssetDatabase.LoadAssetAtPath<TextAsset>($"{TablesFolder}/{file}");
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             return catalog;
@@ -319,22 +326,36 @@ namespace UnitySlotTower.EditorTools
             go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         }
 
-        private static void CreateField()
+        /// <summary>戦闘フィールドの仮表示。マスの実体は Play 時に BattleFieldView がマップ CSV から作る。T201。</summary>
+        private static void CreateField(PresentationCatalog catalog)
         {
-            var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            plane.name = "FieldPlaceholder";
-            plane.transform.localScale = new Vector3(FieldWidthCells / PlaneSize, 1f, FieldHeightCells / PlaneSize);
+            var field = new GameObject("BattleField");
+            var view = field.AddComponent<BattleFieldView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("catalog").objectReferenceValue = catalog;
+            serialized.FindProperty("groundMaterial").objectReferenceValue = GetFieldMaterial("FieldGround", FieldGroundColor);
+            serialized.FindProperty("highMaterial").objectReferenceValue = GetFieldMaterial("FieldHigh", FieldHighColor);
+            serialized.FindProperty("blockedMaterial").objectReferenceValue = GetFieldMaterial("FieldBlocked", FieldBlockedColor);
+            serialized.FindProperty("spawnMaterial").objectReferenceValue = GetFieldMaterial("FieldSpawn", FieldSpawnColor);
+            serialized.FindProperty("goalMaterial").objectReferenceValue = GetFieldMaterial("FieldGoal", FieldGoalColor);
+            serialized.FindProperty("groundPathMaterial").objectReferenceValue = GetFieldMaterial("FieldGroundPath", FieldGroundPathColor);
+            serialized.FindProperty("airPathMaterial").objectReferenceValue = GetFieldMaterial("FieldAirPath", FieldAirPathColor);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
 
-            var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+        private static Material GetFieldMaterial(string materialName, Color color)
+        {
+            var path = $"{FieldMaterialFolder}/{materialName}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(MaterialPath));
+                Directory.CreateDirectory(FieldMaterialFolder);
                 material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                AssetDatabase.CreateAsset(material, MaterialPath);
+                AssetDatabase.CreateAsset(material, path);
             }
-            material.color = FieldColor;
+            material.color = color;
             EditorUtility.SetDirty(material);
-            plane.GetComponent<MeshRenderer>().sharedMaterial = material;
+            return material;
         }
 
         private static void ApplyPlayerSettings()

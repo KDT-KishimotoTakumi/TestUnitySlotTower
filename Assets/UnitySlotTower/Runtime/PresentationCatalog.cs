@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnitySlotTower.Core.Data;
 
@@ -23,11 +24,12 @@ namespace UnitySlotTower.Runtime
 
         private Dictionary<string, Entry> entryById;
 
-        /// <summary>TextAsset の名前（拡張子なし）が CSV ファイル名と一致するものを返す。</summary>
+        /// <summary>TextAsset の名前（拡張子なし）が CSV ファイル名と一致するものを返す。"maps/w1.csv" のようなパスはファイル名部分で比べる。</summary>
         public string ReadTable(string csvFileName)
         {
+            var fileName = Path.GetFileName(csvFileName);
             foreach (var table in tables)
-                if (table != null && table.name + ".csv" == csvFileName) return table.text;
+                if (table != null && table.name + ".csv" == fileName) return table.text;
             return null;
         }
 

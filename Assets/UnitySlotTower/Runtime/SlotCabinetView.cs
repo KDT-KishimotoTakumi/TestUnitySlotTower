@@ -86,14 +86,8 @@ namespace UnitySlotTower.Runtime
 
         private void Awake()
         {
-            var tables = catalog.LoadTables();
-            waitSeconds = tables.SlotRules.WaitSeconds;
-            Wallet = new Wallet(tables.GameConfig.InitialCoins);
-            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting);
-
-            var reels = tables.SlotReels;
-            for (var reel = 0; reel < SlotLayout.ReelCount; reel++) reelViews[reel].Bind(reels, reel);
-
+            // OnEnable は Awake が途中で失敗しても呼ばれる。null のコールバックを InputAction に登録すると、
+            // Reload Domain 無効ではアセット側に残り続け、以降の Play の登録（performed +=）で NRE になるため先に作る
             stepAction = () => Machine.Tick(SimClock.StepSeconds);
             leverCallback = _ => HandleLever();
             leverClick = HandleLever;
@@ -103,6 +97,14 @@ namespace UnitySlotTower.Runtime
                 stopCallbacks[reel] = _ => HandleStop(index);
                 stopClicks[reel] = () => HandleStop(index);
             }
+
+            var tables = catalog.LoadTables();
+            waitSeconds = tables.SlotRules.WaitSeconds;
+            Wallet = new Wallet(tables.GameConfig.InitialCoins);
+            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting);
+
+            var reels = tables.SlotReels;
+            for (var reel = 0; reel < SlotLayout.ReelCount; reel++) reelViews[reel].Bind(reels, reel);
 
             leverClip = ToneSynth.Create("SlotLever", LeverSeconds, LeverHz, LeverHz, ClipDecay);
             stopClip = ToneSynth.Create("SlotStop", StopSeconds, StopHz, StopHz, ClipDecay);
