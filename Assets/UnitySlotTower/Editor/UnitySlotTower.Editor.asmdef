@@ -3,7 +3,8 @@
     "rootNamespace": "UnitySlotTower.EditorTools",
     "references": [
         "UnitySlotTower.Core",
-        "UnitySlotTower.Runtime"
+        "UnitySlotTower.Runtime",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

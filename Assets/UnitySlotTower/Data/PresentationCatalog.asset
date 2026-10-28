@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 931f7c8e914481e40b2fa50133d4cf8f, type: 3}
+  m_Name: PresentationCatalog
+  m_EditorClassIdentifier: UnitySlotTower.Runtime::UnitySlotTower.Runtime.PresentationCatalog
+  tables:
+  - {fileID: 4900000, guid: e9dcf737c1812f0438a5c8357371f1ce, type: 3}
+  - {fileID: 4900000, guid: 25f584255a5624843a2100e06f762688, type: 3}
+  - {fileID: 4900000, guid: a297a046596fd0f47acf7b449ef69321, type: 3}
+  - {fileID: 4900000, guid: 0870aa831029c334f978474d4800cbe6, type: 3}
+  - {fileID: 4900000, guid: 46e291f2f48d64a42a59a5eb6d355794, type: 3}
+  - {fileID: 4900000, guid: 95d863e5ee4f2df4b838e886ed346aa0, type: 3}
+  - {fileID: 4900000, guid: ad2594155b266b647962e1c419148823, type: 3}
+  - {fileID: 4900000, guid: b9bf1357d080a5e47af0deb67c69ed06, type: 3}
+  - {fileID: 4900000, guid: 840973628d75e86489700bf172a57ec0, type: 3}
+  - {fileID: 4900000, guid: c25c670d31ea11b408bd70a9401342e1, type: 3}
+  - {fileID: 4900000, guid: 6861907c924913d49b675e4253134f82, type: 3}
+  - {fileID: 4900000, guid: 4a6db54162ec4254581733213c9f7a7a, type: 3}
+  entries: []
