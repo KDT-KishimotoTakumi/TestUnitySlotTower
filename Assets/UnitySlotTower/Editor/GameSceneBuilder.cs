@@ -9,7 +9,9 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnitySlotTower.Core.Data;
+using UnitySlotTower.Core.Enemies;
 using UnitySlotTower.Core.Slot;
+using UnitySlotTower.Core.Units;
 using UnitySlotTower.Runtime;
 
 namespace UnitySlotTower.EditorTools
@@ -36,6 +38,24 @@ namespace UnitySlotTower.EditorTools
         private static readonly Color FieldGoalColor = new Color(0.2f, 0.45f, 0.95f);
         private static readonly Color FieldGroundPathColor = new Color(0.95f, 0.85f, 0.35f);
         private static readonly Color FieldAirPathColor = new Color(0.4f, 0.9f, 1f);
+        // 戦闘の味方・敵・ゲージ（T209）
+        private static readonly Color TankColor = new Color(0.2f, 0.4f, 0.95f);
+        private static readonly Color SwordsmanColor = new Color(0.9f, 0.2f, 0.2f);
+        private static readonly Color ArcherColor = new Color(0.25f, 0.8f, 0.3f);
+        private static readonly Color HealerColor = new Color(0.95f, 0.95f, 0.95f);
+        private static readonly Color BufferColor = new Color(0.98f, 0.85f, 0.15f);
+        private static readonly Color EnemyMeleeColor = new Color(0.6f, 0.15f, 0.6f);
+        private static readonly Color EnemyRangedColor = new Color(1f, 0.5f, 0.1f);
+        private static readonly Color EnemyAirColor = new Color(0.75f, 0.6f, 1f);
+        private static readonly Color EnemyMidBossColor = new Color(0.55f, 0.05f, 0.1f);
+        private static readonly Color EnemyFinalBossColor = new Color(0.15f, 0.02f, 0.2f);
+        private static readonly Color FacingMarkerColor = new Color(0.08f, 0.08f, 0.1f);
+        private static readonly Color GaugeBackColor = new Color(0.05f, 0.05f, 0.05f);
+        private static readonly Color AllyGaugeColor = new Color(0.3f, 1f, 0.4f);
+        private static readonly Color EnemyGaugeColor = new Color(1f, 0.25f, 0.25f);
+        private static readonly Color RangeHighlightColor = new Color(1f, 0.55f, 0.1f);
+        private static readonly Color LifeOnColor = new Color(1f, 0.3f, 0.45f);
+        private static readonly Color LifeOffColor = new Color(0.2f, 0.12f, 0.15f);
         private static readonly Color PanelColor = new Color(0.05f, 0.04f, 0.05f);
         private static readonly Color PaylineColor = new Color(1f, 0.2f, 0.2f, 0.6f);
         private static readonly Color DisplayTextColor = new Color(1f, 0.85f, 0.2f);
@@ -74,10 +94,11 @@ namespace UnitySlotTower.EditorTools
             CreateBackdropCamera();
             var battleArea = CreateCanvas(out var slotArea);
             CreateEventSystem();
-            CreateSlotCabinet(slotArea, catalog);
-            CreateBattleCamera(battleArea);
+            var cabinet = CreateSlotCabinet(slotArea, catalog);
+            var battleCamera = CreateBattleCamera(battleArea);
             CreateLight();
-            CreateField(catalog);
+            var field = CreateField(catalog);
+            CreateBattle(catalog, field, cabinet, battleCamera);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -205,7 +226,7 @@ namespace UnitySlotTower.EditorTools
         }
 
         /// <summary>下部のスロット筐体（仮表示）を SlotArea の中に作る。T110。</summary>
-        private static void CreateSlotCabinet(RectTransform slotArea, PresentationCatalog catalog)
+        private static SlotCabinetView CreateSlotCabinet(RectTransform slotArea, PresentationCatalog catalog)
         {
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);
             var root = CreateRect("SlotCabinet", slotArea, Vector2.zero, Vector2.one);
@@ -267,6 +288,7 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("waitGauge").objectReferenceValue = gauge;
             serialized.FindProperty("audioSource").objectReferenceValue = audio;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return view;
         }
 
         /// <summary>リール1本の窓（RectMask2D）と、その中で動かすコマの帯を作る。</summary>
@@ -303,7 +325,7 @@ namespace UnitySlotTower.EditorTools
             for (var i = 0; i < items.Length; i++) property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
         }
 
-        private static void CreateBattleCamera(RectTransform area)
+        private static Camera CreateBattleCamera(RectTransform area)
         {
             var go = new GameObject("BattleCamera", typeof(AudioListener));
             var camera = go.AddComponent<Camera>();
@@ -321,6 +343,7 @@ namespace UnitySlotTower.EditorTools
             var serialized = new SerializedObject(viewport);
             serialized.FindProperty("area").objectReferenceValue = area;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return camera;
         }
 
         private static void CreateLight()
@@ -332,7 +355,7 @@ namespace UnitySlotTower.EditorTools
         }
 
         /// <summary>戦闘フィールドの仮表示。マスの実体は Play 時に BattleFieldView がマップ CSV から作る。T201。</summary>
-        private static void CreateField(PresentationCatalog catalog)
+        private static BattleFieldView CreateField(PresentationCatalog catalog)
         {
             var field = new GameObject("BattleField");
             var view = field.AddComponent<BattleFieldView>();
@@ -346,6 +369,65 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("groundPathMaterial").objectReferenceValue = GetFieldMaterial("FieldGroundPath", FieldGroundPathColor);
             serialized.FindProperty("airPathMaterial").objectReferenceValue = GetFieldMaterial("FieldAirPath", FieldAirPathColor);
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        /// <summary>戦闘の実行役と表示（グレーボックス）。味方・敵の実体は Play 時に BattleView がプールから出す。T209。</summary>
+        private static void CreateBattle(PresentationCatalog catalog, BattleFieldView field, SlotCabinetView cabinet, Camera battleCamera)
+        {
+            var go = new GameObject("Battle");
+            var view = go.AddComponent<BattleView>();
+            var viewSerialized = new SerializedObject(view);
+            viewSerialized.FindProperty("battleCamera").objectReferenceValue = battleCamera;
+            // 材質の並びは UnitRole / EnemyKind の値の順
+            var roles = (UnitRole[])System.Enum.GetValues(typeof(UnitRole));
+            var unitMaterials = new Material[roles.Length];
+            foreach (var role in roles) unitMaterials[(int)role] = GetFieldMaterial($"Unit{role}", UnitColor(role));
+            SetArray(viewSerialized.FindProperty("unitMaterials"), unitMaterials);
+            var kinds = (EnemyKind[])System.Enum.GetValues(typeof(EnemyKind));
+            var enemyMaterials = new Material[kinds.Length];
+            foreach (var kind in kinds) enemyMaterials[(int)kind] = GetFieldMaterial($"Enemy{kind}", EnemyColor(kind));
+            SetArray(viewSerialized.FindProperty("enemyMaterials"), enemyMaterials);
+            viewSerialized.FindProperty("facingMaterial").objectReferenceValue = GetFieldMaterial("ActorFacing", FacingMarkerColor);
+            viewSerialized.FindProperty("gaugeBackMaterial").objectReferenceValue = GetFieldMaterial("GaugeBack", GaugeBackColor);
+            viewSerialized.FindProperty("allyGaugeMaterial").objectReferenceValue = GetFieldMaterial("GaugeAlly", AllyGaugeColor);
+            viewSerialized.FindProperty("enemyGaugeMaterial").objectReferenceValue = GetFieldMaterial("GaugeEnemy", EnemyGaugeColor);
+            viewSerialized.FindProperty("rangeMaterial").objectReferenceValue = GetFieldMaterial("RangeHighlight", RangeHighlightColor);
+            viewSerialized.FindProperty("lifeOnMaterial").objectReferenceValue = GetFieldMaterial("LifeOn", LifeOnColor);
+            viewSerialized.FindProperty("lifeOffMaterial").objectReferenceValue = GetFieldMaterial("LifeOff", LifeOffColor);
+            viewSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var runner = go.AddComponent<BattleRunner>();
+            var runnerSerialized = new SerializedObject(runner);
+            runnerSerialized.FindProperty("catalog").objectReferenceValue = catalog;
+            runnerSerialized.FindProperty("field").objectReferenceValue = field;
+            runnerSerialized.FindProperty("view").objectReferenceValue = view;
+            runnerSerialized.FindProperty("cabinet").objectReferenceValue = cabinet;
+            runnerSerialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static Color UnitColor(UnitRole role)
+        {
+            switch (role)
+            {
+                case UnitRole.Tank: return TankColor;
+                case UnitRole.Swordsman: return SwordsmanColor;
+                case UnitRole.Archer: return ArcherColor;
+                case UnitRole.Healer: return HealerColor;
+                default: return BufferColor;
+            }
+        }
+
+        private static Color EnemyColor(EnemyKind kind)
+        {
+            switch (kind)
+            {
+                case EnemyKind.Melee: return EnemyMeleeColor;
+                case EnemyKind.Ranged: return EnemyRangedColor;
+                case EnemyKind.Air: return EnemyAirColor;
+                case EnemyKind.MidBoss: return EnemyMidBossColor;
+                default: return EnemyFinalBossColor;
+            }
         }
 
         private static Material GetFieldMaterial(string materialName, Color color)

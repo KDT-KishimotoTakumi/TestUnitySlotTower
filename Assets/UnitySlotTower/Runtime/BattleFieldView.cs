@@ -13,7 +13,7 @@ namespace UnitySlotTower.Runtime
         private const float GroundPathSize = 0.4f;
         private const float GroundPathThickness = 0.04f;
         private const float AirPathSize = 0.25f;
-        private const float AirPathHeight = 1.3f;
+        public const float AirPathHeight = 1.3f;
         private const float PillarRadius = 0.5f;
         private const float PillarHeight = 0.8f;
         private const float CylinderHeightPerScale = 2f;
@@ -30,6 +30,12 @@ namespace UnitySlotTower.Runtime
         [SerializeField] private Material airPathMaterial;
 
         public MapData Map { get; private set; }
+
+        /// <summary>マス座標とフィールドのローカル座標の変換（Map ができた後に使う）。</summary>
+        public FieldGeometry Geometry => new FieldGeometry(Map.Width, Map.Height);
+
+        /// <summary>マスの上面の高さ（その上に立つ味方・敵の足元）。</summary>
+        public float SurfaceHeight(GridPoint cell) => CellHeight(Map.GetCell(cell));
 
         private void Awake()
         {
@@ -85,8 +91,7 @@ namespace UnitySlotTower.Runtime
         }
 
         /// <summary>マスの中心（フィールドの中央が原点）。y=0 の行が奥（画面の上）に来る。</summary>
-        private Vector3 LocalCenter(GridPoint point, float height) =>
-            new Vector3(point.X - (Map.Width - 1) * Half, height, (Map.Height - 1) * Half - point.Y);
+        private Vector3 LocalCenter(GridPoint point, float height) => Geometry.ToLocal(point, height);
 
         private static float CellHeight(CellType type)
         {
