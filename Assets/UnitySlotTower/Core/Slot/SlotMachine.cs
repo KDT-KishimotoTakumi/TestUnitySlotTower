@@ -69,7 +69,8 @@ namespace UnitySlotTower.Core.Slot
         /// <summary>リールの回転速度（約 80 回転/分）。</summary>
         public const double SpinSymbolsPerSecond = 28.0;
 
-        private const string BigRole = "BIG";
+        public const string BigRole = "BIG";
+        public const string RegRole = "REG";
 
         private readonly SlotProbabilityTable probabilities;
         private readonly SlotPayoutTable payouts;
@@ -86,6 +87,7 @@ namespace UnitySlotTower.Core.Slot
         private readonly int kakuhenGames;
         private readonly int[] stops = { SlotReelController.Unstopped, SlotReelController.Unstopped, SlotReelController.Unstopped };
         private readonly double[] phases = new double[SlotLayout.ReelCount];
+        private readonly int[] aimedPress = new int[SlotLayout.ReelCount];
 
         private readonly System.Collections.Generic.Dictionary<string, SlotFlag> combinedFlags =
             new System.Collections.Generic.Dictionary<string, SlotFlag>();
@@ -201,6 +203,51 @@ namespace UnitySlotTower.Core.Slot
             stops[reel] = controller.Decide(Flag, stops[0], stops[1], stops[2], reel, press);
             if (IsStopped(0) && IsStopped(1) && IsStopped(2)) Finish();
             return StopResult.Stopped;
+        }
+
+        /// <summary>
+        /// シミュレーション用に1ゲームを即座に進める。ウェイトを待たず、ボーナスが揃えられる押し位置があれば
+        /// それで止める理想の目押しのプレイヤー。コインが足りないときは例外を投げる。
+        /// </summary>
+        public SlotGameResult PlayInstant()
+        {
+            waitRemaining = 0f;
+            var lever = PullLever();
+            if (lever != LeverResult.Started) throw new InvalidOperationException($"レバーを引けません: {lever}");
+
+            for (var reel = 0; reel < SlotLayout.ReelCount; reel++) aimedPress[reel] = 0;
+            if (Flag.Bonus != null) FindBonusPresses();
+            for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
+            {
+                phases[reel] = aimedPress[reel];
+                PressStop(reel);
+            }
+            return LastResult;
+        }
+
+        /// <summary>左・中・右の順に止めてボーナスが揃う押し位置の組を探し、見つかれば aimedPress に入れる。</summary>
+        private void FindBonusPresses()
+        {
+            var bit = 0;
+            while (payouts.Payouts[bit].Role != Flag.Bonus.Role) bit++;
+            const int u = SlotReelController.Unstopped;
+            for (var p0 = 0; p0 < SlotLayout.ReelSize; p0++)
+            {
+                var s0 = controller.Decide(Flag, u, u, u, 0, p0);
+                for (var p1 = 0; p1 < SlotLayout.ReelSize; p1++)
+                {
+                    var s1 = controller.Decide(Flag, s0, u, u, 1, p1);
+                    for (var p2 = 0; p2 < SlotLayout.ReelSize; p2++)
+                    {
+                        var s2 = controller.Decide(Flag, s0, s1, u, 2, p2);
+                        if ((controller.Evaluate(s0, s1, s2) & (1UL << bit)) == 0) continue;
+                        aimedPress[0] = p0;
+                        aimedPress[1] = p1;
+                        aimedPress[2] = p2;
+                        return;
+                    }
+                }
+            }
         }
 
         /// <summary>
