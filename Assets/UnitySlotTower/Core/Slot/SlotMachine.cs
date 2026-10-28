@@ -36,7 +36,14 @@ namespace UnitySlotTower.Core.Slot
         public int Payout { get; }
         public bool Replay { get; }
 
-        public SlotGameResult(SlotFlag flag, int[] stops, ulong realizedMask, int betPaid, int payout, bool replay)
+        /// <summary>このゲームでボーナス図柄が揃い、ボーナスが始まった場合の役（BIG/REG）。なければ null。</summary>
+        public SlotPayout BonusStarted { get; }
+
+        /// <summary>このゲームの後も持ち越しているボーナスフラグ。なければ null。</summary>
+        public SlotPayout CarriedBonus { get; }
+
+        public SlotGameResult(SlotFlag flag, int[] stops, ulong realizedMask, int betPaid, int payout, bool replay,
+            SlotPayout bonusStarted, SlotPayout carriedBonus)
         {
             Flag = flag;
             Stops = stops;
@@ -44,6 +51,8 @@ namespace UnitySlotTower.Core.Slot
             BetPaid = betPaid;
             Payout = payout;
             Replay = replay;
+            BonusStarted = bonusStarted;
+            CarriedBonus = carriedBonus;
         }
     }
 
@@ -67,8 +76,12 @@ namespace UnitySlotTower.Core.Slot
         private readonly int[] stops = { SlotReelController.Unstopped, SlotReelController.Unstopped, SlotReelController.Unstopped };
         private readonly double[] phases = new double[SlotLayout.ReelCount];
 
+        private readonly System.Collections.Generic.Dictionary<string, SlotFlag> combinedFlags =
+            new System.Collections.Generic.Dictionary<string, SlotFlag>();
+
         private int betPaid;
         private float waitRemaining;
+        private SlotPayout carriedBonus;
 
         public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting)
         {
@@ -94,7 +107,16 @@ namespace UnitySlotTower.Core.Slot
         public bool ReplayPending { get; private set; }
 
         public int GameCount { get; private set; }
+
+        /// <summary>このゲームでリール制御に使う成立役の組（今回の小役 ＋ 持ち越し中のボーナス）。</summary>
         public SlotFlag Flag { get; private set; } = SlotFlag.None;
+
+        /// <summary>揃うまで持ち越しているボーナスフラグ（BIG/REG）。なければ null。</summary>
+        public SlotPayout CarriedBonus => carriedBonus;
+
+        /// <summary>いま行われているボーナス（BIG/REG）。ボーナス中でなければ null。</summary>
+        public SlotPayout ActiveBonus { get; private set; }
+
         public SlotGameResult LastResult { get; private set; }
 
         /// <summary>次のレバーまでのウェイトの残り秒数。</summary>
@@ -117,7 +139,7 @@ namespace UnitySlotTower.Core.Slot
             betPaid = cost;
             ReplayPending = false;
             GameCount++;
-            Flag = probabilities.Draw(Setting, State, random);
+            Flag = DrawFlag();
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
             {
                 stops[reel] = SlotReelController.Unstopped;
@@ -152,21 +174,57 @@ namespace UnitySlotTower.Core.Slot
             return StopResult.Stopped;
         }
 
+        /// <summary>
+        /// 内部抽選。ボーナスが当選したら揃うまで持ち越す。持ち越し中は抽選でボーナスを重ねず、
+        /// 今回の小役だけを使って、持ち越しているボーナスと組にする。
+        /// </summary>
+        private SlotFlag DrawFlag()
+        {
+            var drawn = probabilities.Draw(Setting, State, random);
+            if (State == SlotState.Bonus) return drawn;
+            if (carriedBonus == null)
+            {
+                carriedBonus = drawn.Bonus;
+                return drawn;
+            }
+            return Combine(drawn.Small, carriedBonus);
+        }
+
+        private SlotFlag Combine(SlotPayout small, SlotPayout bonus)
+        {
+            var id = small == null ? bonus.Role : small.Role + "+" + bonus.Role;
+            if (!combinedFlags.TryGetValue(id, out var flag))
+            {
+                flag = new SlotFlag(id, small == null ? new[] { bonus } : new[] { small, bonus });
+                combinedFlags[id] = flag;
+            }
+            return flag;
+        }
+
         private void Finish()
         {
             var mask = controller.Evaluate(stops[0], stops[1], stops[2]);
             var payout = 0;
             var replay = false;
+            SlotPayout bonusStarted = null;
             for (var i = 0; i < payouts.Payouts.Count; i++)
             {
                 if ((mask & (1UL << i)) == 0) continue;
-                payout += payouts.Payouts[i].Payout;
-                if (payouts.Payouts[i].Kind == SlotRoleKind.Replay) replay = true;
+                var role = payouts.Payouts[i];
+                payout += role.Payout;
+                if (role.Kind == SlotRoleKind.Replay) replay = true;
+                if (role.Kind == SlotRoleKind.Bonus) bonusStarted = role;
             }
 
             wallet.Add(payout);
             ReplayPending = replay;
-            LastResult = new SlotGameResult(Flag, (int[])stops.Clone(), mask, betPaid, payout, replay);
+            if (bonusStarted != null)
+            {
+                ActiveBonus = bonusStarted;
+                State = SlotState.Bonus;
+                carriedBonus = null;
+            }
+            LastResult = new SlotGameResult(Flag, (int[])stops.Clone(), mask, betPaid, payout, replay, bonusStarted, carriedBonus);
             Phase = SlotPhase.Idle;
         }
     }

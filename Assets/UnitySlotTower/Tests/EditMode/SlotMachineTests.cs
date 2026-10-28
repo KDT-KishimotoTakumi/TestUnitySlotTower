@@ -13,15 +13,15 @@ namespace UnitySlotTower.Tests
         private const float Step = SimClock.StepSeconds;
         private const ulong MachineSeed = 7;
         private const ulong PlayerSeed = 99;
-        private const int Setting = 1;
+        internal const int Setting = 1;
         private const int MaxSlip = 4;
 
-        private static readonly string[] States = { "normal", "kakuhen", "bonus" };
+        internal static readonly string[] States = { "normal", "kakuhen", "bonus" };
 
-        private static TableSet Real() => TableSet.Load(TableTests.ReadFile);
+        internal static TableSet Real() => TableSet.Load(TableTests.ReadFile);
 
         /// <summary>全設定・全状態で flagId が必ず成立する確率表（probability 0 ならハズレ固定）。</summary>
-        private static TableSet Forced(string flagId, int probability = 1)
+        internal static TableSet Forced(string flagId, int probability = 1)
         {
             var sb = new StringBuilder("role,setting,state,probability\n");
             for (var setting = SlotProbabilityTable.MinSetting; setting <= SlotProbabilityTable.MaxSetting; setting++)
@@ -30,20 +30,20 @@ namespace UnitySlotTower.Tests
             return TableSet.Load(f => f == TableSet.SlotProbabilitiesFile ? text : TableTests.ReadFile(f));
         }
 
-        private static int RoleIndex(System.Collections.Generic.IReadOnlyList<SlotPayout> payoutList, string role)
+        internal static int RoleIndex(System.Collections.Generic.IReadOnlyList<SlotPayout> payoutList, string role)
         {
             for (var i = 0; i < payoutList.Count; i++)
                 if (payoutList[i].Role == role) return i;
             throw new ArgumentException($"役 {role} がありません");
         }
 
-        private static void Advance(SlotMachine machine, float seconds)
+        internal static void Advance(SlotMachine machine, float seconds)
         {
             for (var t = 0f; t < seconds; t += Step) machine.Tick(Step);
         }
 
         /// <summary>レバーを引き、ばらばらの順序とタイミングで3本止める。</summary>
-        private static SlotGameResult PlayGame(SlotMachine machine, GameRandom player)
+        internal static SlotGameResult PlayGame(SlotMachine machine, GameRandom player)
         {
             Assert.AreEqual(LeverResult.Started, machine.PullLever());
             var order = new[] { 0, 1, 2 };
@@ -64,7 +64,7 @@ namespace UnitySlotTower.Tests
             return machine.LastResult;
         }
 
-        private static SlotMachine Create(TableSet tables, Wallet wallet, ulong seed = MachineSeed) =>
+        internal static SlotMachine Create(TableSet tables, Wallet wallet, ulong seed = MachineSeed) =>
             new SlotMachine(tables, wallet, new GameRandom(seed), Setting);
 
         [Test]
