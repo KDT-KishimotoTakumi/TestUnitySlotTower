@@ -36,6 +36,7 @@ namespace UnitySlotTower.Core.Data
             var slotReels = tables.SlotReels;
             var slotPayouts = tables.SlotPayouts;
             var slotRules = tables.SlotRules;
+            var slotProbabilities = tables.SlotProbabilities;
             var config = tables.GameConfig;
             if (config.Bet > config.InitialCoins && config.InitialCoins > 0)
                 throw new CsvException(TableSet.GameConfigFile, 0, "value", "掛け金が初期コインを超えています");
