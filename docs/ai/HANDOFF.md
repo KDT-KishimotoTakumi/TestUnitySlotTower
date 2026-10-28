@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T109 完了（T108 までコミット済み `3dc298e`、T109 は未コミット）。次は T110
+更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T109 完了（T109 までコミット済み `1b0637e`）。T110 は実装済み・未コミット・手動確認待ち
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -19,7 +19,8 @@
 - T107（確変）: 通常時の BIG 終了後に `kakuhen_entry_rate`（仮値 1）の抽選で State=Kakuhen・`KakuhenRemaining=kakuhen_games`（仮値 100）。確変中は kakuhen の確率表を使い、1ゲームごと（ボーナスが始まったゲームも）に残りが減って 0 で通常へ。確変中に BIG が揃うと抽選なしでゲーム数をリセットして続く。REG は確変に入らず、確変中の REG はボーナス中に残りが減らず、終了後に残りゲーム数で確変に戻る。確変が先に切れてから揃った持ち越しボーナスは通常時扱い。
 - T108（先バレ）: `slot_premonition.csv`（role,rate。役名か NONE＝ガセ、重複当選は最大の率）。`SlotMachine.Premonition` がレバーオン時の抽選結果（次のレバーまで保持）。ボーナス持ち越し中は新しく当たった小役だけで判定。先バレの抽選は乱数を1回使うので、それ以前の乱数列とは変わっている（テストは範囲で見ているので影響なし）。率は仮値。
 - T109（機械割）: `SlotRateCalculator.Calculate(tables, setting)` が理論機械割と BIG/REG の1ゲームあたり開始数を返す（機械割＝払い出し÷投入、リプレイは掛け金の払い戻し扱い、ボーナスは当選ゲームで揃う前提）。`SlotMachine.PlayInstant()` は理想の目押しで即座に1ゲーム進めるシミュレーション用。`slot_probabilities.csv` の BIG/REG を含む行（通常・確変）を `Tools/UnitySlotTower/Slot/Tune Bonus Rates` で設定ごとに倍率調整済み（目標 100/104/108/112/118/125% に一致）。確率や配当を変えたら `Report Machine Rates` で確認し、目標に戻すなら `Tune Bonus Rates` を再実行する（BIG/REG 行だけが書き換わる）。`SlotRateTests` が目標との差・理論値と実測の差を検査する（約25秒）。実行は `editor menu "<メニュー名>"`（Invoke-UnityMcp.ps1 経由）。
-- 次の一手: T110（下部のスロット筐体の仮表示。リール回転・停止、ボタン、ランプ、クレジットの数字、先バレの光と音、ウェイト2秒）。表示は数字・記号のみ（`AllowedText`、フォントは `DigitsSDF`）。M1 の締めは目押しの手動確認（プレイヤーが必要）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T110（筐体の仮表示、未コミット）: `Runtime/SlotCabinetView`（`SlotMachine`/`Wallet` を内部で作る暫定構成、`SimClock` 1/60 秒で Tick、uGUI クリック＋Space/J/K/L）、`SlotReelView`（25コマ帯）、`ToneSynth`（コード生成の仮音）。筐体は `GameSceneBuilder` が生成（`Game.unity` 再生成済み）。設定は `[SerializeField] setting = 1` の暫定で、難易度選択との接続と Wallet 統合は T301。ハーネス8件・EditMode 106件成功、レビュー指摘なし。未確認: 先バレのランプ・音、コイン不足の点滅、実際のキー/クリック、目押し。コミット時は新規 `.cs` 3本の `.meta` を含め、`DigitsSDF.asset` の既存差分は含めない。
+- 次の一手: プレイヤーによる T110 の手動確認（目押し・先バレ）→ 問題なければ T110 を完了にしてコミット → T111 以降（M1 の締め）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
