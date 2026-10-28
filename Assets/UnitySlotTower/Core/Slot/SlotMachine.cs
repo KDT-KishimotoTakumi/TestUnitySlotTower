@@ -81,6 +81,8 @@ namespace UnitySlotTower.Core.Slot
         private readonly float waitSeconds;
         private readonly int bigMaxPayout;
         private readonly int regMaxPayout;
+        private readonly double kakuhenEntryRate;
+        private readonly int kakuhenGames;
         private readonly int[] stops = { SlotReelController.Unstopped, SlotReelController.Unstopped, SlotReelController.Unstopped };
         private readonly double[] phases = new double[SlotLayout.ReelCount];
 
@@ -90,6 +92,7 @@ namespace UnitySlotTower.Core.Slot
         private int betPaid;
         private float waitRemaining;
         private SlotPayout carriedBonus;
+        private bool bonusFromKakuhen;
 
         public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting)
         {
@@ -104,6 +107,8 @@ namespace UnitySlotTower.Core.Slot
             waitSeconds = rules.WaitSeconds;
             bigMaxPayout = rules.BonusBigMaxPayout;
             regMaxPayout = rules.BonusRegMaxPayout;
+            kakuhenEntryRate = rules.KakuhenEntryRate;
+            kakuhenGames = rules.KakuhenGames;
             this.wallet = wallet;
             this.random = random;
             Setting = setting;
@@ -126,6 +131,9 @@ namespace UnitySlotTower.Core.Slot
 
         /// <summary>いま行われているボーナス（BIG/REG）。ボーナス中でなければ null。</summary>
         public SlotPayout ActiveBonus { get; private set; }
+
+        /// <summary>確変の残りゲーム数（確変中とボーナス中に持ち越す。確変でなければ 0）。</summary>
+        public int KakuhenRemaining { get; private set; }
 
         /// <summary>いまのボーナスでこれまでに払い出した枚数（始まったゲームの分は含まない）。</summary>
         public int BonusPayout { get; private set; }
@@ -217,6 +225,20 @@ namespace UnitySlotTower.Core.Slot
             return flag;
         }
 
+        /// <summary>
+        /// ボーナス終了後の状態。BIG の後は突入率で確変に入り、確変中の BIG なら必ず続けてゲーム数をリセットする。
+        /// REG は確変中に引いたときだけ、残りゲーム数のまま確変に戻る。
+        /// </summary>
+        private SlotState StateAfterBonus(SlotPayout ended)
+        {
+            if (ended.Role == BigRole)
+            {
+                var enters = bonusFromKakuhen || random.NextDouble() < kakuhenEntryRate;
+                KakuhenRemaining = enters ? kakuhenGames : 0;
+            }
+            return KakuhenRemaining > 0 ? SlotState.Kakuhen : SlotState.Normal;
+        }
+
         private void Finish()
         {
             var mask = controller.Evaluate(stops[0], stops[1], stops[2]);
@@ -243,16 +265,26 @@ namespace UnitySlotTower.Core.Slot
                 {
                     bonusEnded = ActiveBonus;
                     ActiveBonus = null;
-                    State = SlotState.Normal;
+                    State = StateAfterBonus(bonusEnded);
                 }
             }
-            else if (bonusStarted != null)
+            else
             {
-                ActiveBonus = bonusStarted;
-                State = SlotState.Bonus;
-                carriedBonus = null;
-                BonusPayout = 0;
-                BonusGames = 0;
+                var inKakuhen = State == SlotState.Kakuhen;
+                if (inKakuhen) KakuhenRemaining--;
+                if (bonusStarted != null)
+                {
+                    ActiveBonus = bonusStarted;
+                    State = SlotState.Bonus;
+                    bonusFromKakuhen = inKakuhen;
+                    carriedBonus = null;
+                    BonusPayout = 0;
+                    BonusGames = 0;
+                }
+                else if (inKakuhen && KakuhenRemaining <= 0)
+                {
+                    State = SlotState.Normal;
+                }
             }
             LastResult = new SlotGameResult(Flag, (int[])stops.Clone(), mask, betPaid, payout, replay, bonusStarted, carriedBonus, bonusEnded);
             Phase = SlotPhase.Idle;

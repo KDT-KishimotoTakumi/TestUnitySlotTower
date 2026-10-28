@@ -87,13 +87,13 @@ namespace UnitySlotTower.Tests
                     Assert.AreEqual(bonus, result.BonusEnded.Role);
                     Assert.GreaterOrEqual(machine.BonusPayout, limit);
                     Assert.Less(machine.BonusPayout - each, limit, "上限を超えた最初のゲームで終わる");
-                    Assert.AreEqual(SlotState.Normal, machine.State);
+                    Assert.AreEqual(bonus == "BIG" ? SlotState.Kakuhen : SlotState.Normal, machine.State, "BIG の後は確変（T107）、REG の後は通常");
                     Assert.IsNull(machine.ActiveBonus);
                 }
             }
 
             var next = SlotMachineTests.PlayGame(machine, player);
-            Assert.AreEqual(bonus, next.Flag.Bonus.Role, "ボーナスが終わると通常の抽選表に戻る");
+            Assert.AreEqual(bonus, next.Flag.Bonus.Role, "ボーナスが終わるとボーナス用でない抽選表に戻る");
             Assert.IsNull(next.BonusEnded);
         }
 
