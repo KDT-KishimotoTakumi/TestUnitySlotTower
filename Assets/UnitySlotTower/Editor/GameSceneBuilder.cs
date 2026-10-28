@@ -16,7 +16,7 @@ using UnitySlotTower.Runtime;
 
 namespace UnitySlotTower.EditorTools
 {
-    /// <summary>Game シーンの骨組み（縦長 9:16 レイアウト）を作り直す。T006。</summary>
+    /// <summary>Game シーンの骨組み（横長 16:9 レイアウト）を作り直す。T006。</summary>
     public static class GameSceneBuilder
     {
         private const string ScenePath = "Assets/UnitySlotTower/Scenes/Game.unity";
@@ -24,7 +24,7 @@ namespace UnitySlotTower.EditorTools
         private const string TablesFolder = "Assets/UnitySlotTower/Data/Tables";
         private const string FieldMaterialFolder = "Assets/UnitySlotTower/Art/Materials";
 
-        private const float CameraDistance = 11f;
+        private const float CameraDistance = 15f;
         private const float CameraFieldOfView = 40f;
 
         private static readonly Color BackdropColor = Color.black;
@@ -175,7 +175,7 @@ namespace UnitySlotTower.EditorTools
             camera.depth = -10;
         }
 
-        /// <summary>キャンバスと PlayArea（画面全体に広げる。縦横比は固定しない）を作り、戦闘領域の RectTransform を返す。</summary>
+        /// <summary>キャンバスと PlayArea（16:9 枠。左に戦闘領域と操作バー、右にスロット）を作り、戦闘領域の RectTransform を返す。</summary>
         private static RectTransform CreateCanvas(out RectTransform slotArea, out RectTransform operationBar)
         {
             var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -189,13 +189,16 @@ namespace UnitySlotTower.EditorTools
 
             var playArea = CreateRect("PlayArea", canvasObject.transform, Vector2.zero, Vector2.one);
 
-            const float battleBottom = 1f - GameLayout.BattleHeightFraction;
-            const float barBottom = battleBottom - GameLayout.OperationBarHeightFraction;
-            var battle = CreateRect("BattleViewport", playArea, new Vector2(0f, battleBottom), Vector2.one);
-            var bar = CreateRect("OperationBar", playArea, new Vector2(0f, barBottom), new Vector2(1f, battleBottom));
+            var fitter = playArea.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = (float)GameLayout.ReferenceWidth / GameLayout.ReferenceHeight;
+
+            const float barTop = GameLayout.OperationBarHeightFraction;
+            var battle = CreateRect("BattleViewport", playArea, new Vector2(0f, barTop), new Vector2(GameLayout.BattleWidthFraction, 1f));
+            var bar = CreateRect("OperationBar", playArea, Vector2.zero, new Vector2(GameLayout.BattleWidthFraction, barTop));
             bar.gameObject.AddComponent<Image>().color = OperationBarColor;
             operationBar = bar;
-            slotArea = CreateRect("SlotArea", playArea, Vector2.zero, new Vector2(1f, barBottom));
+            slotArea = CreateRect("SlotArea", playArea, new Vector2(GameLayout.BattleWidthFraction, 0f), Vector2.one);
             slotArea.gameObject.AddComponent<Image>().color = SlotAreaColor;
             return battle;
         }
@@ -226,7 +229,7 @@ namespace UnitySlotTower.EditorTools
         {
             var label = CreateRect(name, parent, min, max).gameObject.AddComponent<TextMeshProUGUI>();
             label.font = font;
-            // 枠に収まる大きさに自動調整（指定は上限）。画面比が 9:16 でなくても枠からはみ出さない
+            // 枠に収まる大きさに自動調整（指定は上限）。画面比が 16:9 でなくても枠からはみ出さない
             label.enableAutoSizing = true;
             label.fontSizeMax = fontSize;
             label.fontSizeMin = MinAutoFontSize;
@@ -256,7 +259,7 @@ namespace UnitySlotTower.EditorTools
             go.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
         }
 
-        /// <summary>下部のスロット筐体（仮表示）を SlotArea の中に作る。T110。</summary>
+        /// <summary>右側のスロット筐体（仮表示）を SlotArea の中に作る。T110。</summary>
         private static SlotCabinetView CreateSlotCabinet(RectTransform slotArea, PresentationCatalog catalog)
         {
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);

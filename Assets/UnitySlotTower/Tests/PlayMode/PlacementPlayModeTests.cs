@@ -292,7 +292,7 @@ namespace UnitySlotTower.Tests
             yield return MouseUp();
             Assert.AreEqual(PlacementPhase.Facing, input.Controller.Phase);
             yield return MouseDown();
-            yield return MoveMouse(new Vector2(Screen.width * 0.5f, Screen.height * 0.2f));   // スロット領域
+            yield return MoveMouse(new Vector2(Screen.width * 0.8f, Screen.height * 0.5f));   // スロット領域（右側）
             yield return MouseUp();
             Assert.AreEqual(PlacementPhase.Idle, input.Controller.Phase);
             Assert.AreEqual(0, runner.Board.Units.Count);
