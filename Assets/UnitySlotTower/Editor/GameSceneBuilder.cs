@@ -175,7 +175,7 @@ namespace UnitySlotTower.EditorTools
             camera.depth = -10;
         }
 
-        /// <summary>キャンバスと PlayArea（9:16 枠）を作り、戦闘領域の RectTransform を返す。</summary>
+        /// <summary>キャンバスと PlayArea（画面全体に広げる。縦横比は固定しない）を作り、戦闘領域の RectTransform を返す。</summary>
         private static RectTransform CreateCanvas(out RectTransform slotArea, out RectTransform operationBar)
         {
             var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -188,9 +188,6 @@ namespace UnitySlotTower.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
 
             var playArea = CreateRect("PlayArea", canvasObject.transform, Vector2.zero, Vector2.one);
-            var fitter = playArea.gameObject.AddComponent<AspectRatioFitter>();
-            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fitter.aspectRatio = (float)GameLayout.ReferenceWidth / GameLayout.ReferenceHeight;
 
             const float battleBottom = 1f - GameLayout.BattleHeightFraction;
             const float barBottom = battleBottom - GameLayout.OperationBarHeightFraction;
