@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnitySlotTower.Core.Map;
 
 namespace UnitySlotTower.Core.Units
@@ -10,8 +11,12 @@ namespace UnitySlotTower.Core.Units
     public sealed class PlacementBoard
     {
         private readonly PlacedUnit[,] occupants;
+        private readonly List<PlacedUnit> units = new List<PlacedUnit>();
 
         public MapData Map { get; }
+
+        /// <summary>置かれている味方（置いた順）。</summary>
+        public IReadOnlyList<PlacedUnit> Units => units;
 
         public PlacementBoard(MapData map)
         {
@@ -39,14 +44,17 @@ namespace UnitySlotTower.Core.Units
             if (result != PlacementResult.Ok) return result;
             placed = new PlacedUnit(unit, cell, facing);
             occupants[cell.X, cell.Y] = placed;
+            units.Add(placed);
             return PlacementResult.Ok;
         }
 
         /// <summary>マスの味方を取り除く（撤退・消滅時）。いなければ false。</summary>
         public bool Remove(GridPoint cell)
         {
-            if (GetAt(cell) == null) return false;
+            var unit = GetAt(cell);
+            if (unit == null) return false;
             occupants[cell.X, cell.Y] = null;
+            units.Remove(unit);
             return true;
         }
     }

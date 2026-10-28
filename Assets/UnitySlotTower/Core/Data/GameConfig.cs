@@ -15,8 +15,11 @@ namespace UnitySlotTower.Core.Data
         public int LifeBonusPerLife { get; }
         public int MaxDeployed { get; }
         public float RefundRate { get; }
+        /// <summary>バッファーの範囲内の味方にかかる攻撃力の倍率（1 以上。重ねがけはしない）。</summary>
+        public float BufferAtkMultiplier { get; }
 
-        private GameConfig(int initialCoins, int bet, int startingLife, int lifeBonusPerLife, int maxDeployed, float refundRate)
+        private GameConfig(int initialCoins, int bet, int startingLife, int lifeBonusPerLife, int maxDeployed, float refundRate,
+            float bufferAtkMultiplier)
         {
             InitialCoins = initialCoins;
             Bet = bet;
@@ -24,6 +27,7 @@ namespace UnitySlotTower.Core.Data
             LifeBonusPerLife = lifeBonusPerLife;
             MaxDeployed = maxDeployed;
             RefundRate = refundRate;
+            BufferAtkMultiplier = bufferAtkMultiplier;
         }
 
         public static GameConfig FromTable(CsvTable table)
@@ -50,9 +54,14 @@ namespace UnitySlotTower.Core.Data
             if (refund < 0f || refund > 1f)
                 throw Require("refund_rate").Error(ValueColumn, $"refund_rate は 0〜1 にしてください: {refund}");
 
+            var bufferRow = Require("buffer_atk_multiplier");
+            var buffer = bufferRow.GetFloat(ValueColumn);
+            if (buffer < 1f)
+                throw bufferRow.Error(ValueColumn, $"buffer_atk_multiplier は 1 以上にしてください: {buffer}");
+
             return new GameConfig(
                 Int("initial_coins", 0), Int("bet", 1), Int("starting_life", 1),
-                Int("life_bonus_per_life", 0), Int("max_deployed", 1), refund);
+                Int("life_bonus_per_life", 0), Int("max_deployed", 1), refund, buffer);
         }
     }
 }

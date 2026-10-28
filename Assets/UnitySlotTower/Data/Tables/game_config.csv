@@ -5,3 +5,4 @@ starting_life,10
 life_bonus_per_life,3
 max_deployed,8
 refund_rate,0.5
+buffer_atk_multiplier,1.3

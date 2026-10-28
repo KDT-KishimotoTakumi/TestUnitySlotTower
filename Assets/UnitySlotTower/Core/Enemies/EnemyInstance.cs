@@ -16,7 +16,7 @@ namespace UnitySlotTower.Core.Enemies
         /// <summary>経路上の進み具合（マス数）。0 が出現口、Cells.Count - 1 がゴール。</summary>
         public double Progress { get; private set; }
         public bool ReachedGoal { get; private set; }
-        public float Hp { get; }
+        public float Hp { get; private set; }
         /// <summary>次に攻撃できるまでの残り時間（秒）。攻撃できる状態では 0 以下。</summary>
         public float AttackTimer { get; private set; }
         /// <summary>この敵をブロックしている味方。ブロックされていなければ null（FR-027）。</summary>
@@ -29,6 +29,12 @@ namespace UnitySlotTower.Core.Enemies
             Path = path ?? throw new ArgumentNullException(nameof(path));
             if (def.IsAir != path.IsAir) throw new ArgumentException($"敵 '{def.Id}' と経路 '{path.Id}' の空中／地上が合っていません");
             Hp = def.MaxHp;
+        }
+
+        /// <summary>HP を amount だけ減らす（0 未満にはしない）。撃破の処理は BattleSimulation が行う。</summary>
+        public void TakeDamage(float amount)
+        {
+            Hp = Hp - amount > 0f ? Hp - amount : 0f;
         }
 
         /// <summary>連続座標（マスの中心を整数とする。GridPoint と同じ向き）。</summary>
