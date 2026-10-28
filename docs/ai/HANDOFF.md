@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T103 完了（T102 までコミット済み `7eb1be6`、T103 は未コミット）。次は T104
+更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T104 完了（T103 までコミット済み `1253a7d`、T104 は未コミット）。次は T105
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -13,7 +13,8 @@
 - T102（内部抽選）: `slot_probabilities.csv`（role,setting,state,probability。state は normal/kakuhen/bonus、role は `+` で重複当選、ハズレ `NONE` は書かず残り確率）。`SlotProbabilityTable.Draw(setting, state, GameRandom)` が `SlotFlag`（`Bonus`/`Small`）を返す。生成元スクリプトは一時的なもので、以後は CSV を直接編集してよい。ボーナス持ち越し中の抽選スキップは T105 で扱う。
 - T103（リール制御）: `SlotReelController`。`Evaluate(s0,s1,s2)` が揃った役のビット（payouts の並び順）、`Decide(flag, s0,s1,s2, reel, press)` が停止位置（回転中は `Unstopped`=-1）。停止位置は press から最大 `MaxSlip` コマ先。小役・リプレイは必ず揃え、非成立役は揃えず、ボーナスは目押しが合うときだけ（狙える手を優先）。リール配列を変えたら `SlotReelControlTests` の全数検査（約1分）で再確認する。配列が安全でないときは `Tools/UnitySlotTower/Slot/Search Reel Layout`（`SlotReelOptimizer`、結果は `Artifacts/Automation/reels-candidate.csv`、Editor は探索中も応答する）で入れ替え探索ができる。現在の `slot_reels.csv` は探索結果で、左リールは [BELL REPLAY WATERMELON CHERRY]×5＋SEVEN のまま、中・右は並びを入れ替えた（T101 の「3種サイクル」ではなくなった）。
 - T103 の設計判断: 小役との重複当選（WATERMELON+BIG など）は、同じ窓に両方の図柄が入らない限りボーナスが同時には揃わない＝ボーナスは持ち越しになる（T105 で扱う）。
-- 次の一手: T104（ベット＋レバー、コイン不足時の拒否、リプレイ、払い出し。`Evaluate` の結果と `slot_payouts.csv` の払い出しを使う）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T104（1ゲームの進行）: `Core/Economy/Wallet`（スロットと戦闘で共有する財布。T301 で統合）と `Core/Slot/SlotMachine`。`PullLever()`（`LeverResult`: Started/NotEnoughCoins/Waiting/Busy。掛け金は `game_config.csv` の `bet` を自動投入、リプレイ後は 0）、`Tick(dt)`（固定ステップから呼ぶ。回転 28 コマ/秒、ウェイト `wait_seconds`）、`PressStop(reel)`（押した瞬間の `ReelPosition` を `SlotReelController.Decide` に渡す）。全停止で払い出しを財布に加算し `LastResult`（`SlotGameResult`: Flag/Stops/RealizedMask/BetPaid/Payout/Replay）を更新。`State` は Normal 固定で、確変・ボーナス中への遷移は T105〜T107。注意: `TableSet.SlotPayouts` などのプロパティは呼ぶたびに表を作り直す（参照比較に使わない、ループ内で呼ばない）。
+- 次の一手: T105（BIG/REG フラグの持ち越しと、揃えたときのボーナス開始）。重複当選（WATERMELON+BIG など）は同じ窓に両方入らないとボーナスが揃わず持ち越しになる（T103 の設計判断）。持ち越し中は抽選でボーナスを重ねず、小役より優先して引き込む（plan 5章）。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
