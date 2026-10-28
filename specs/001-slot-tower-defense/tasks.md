@@ -31,7 +31,7 @@
 ## M2 戦闘の核
 
 - [x] T201 (FR-023) `maps/w1.csv`・`map_paths.csv` からグリッドと経路を作り、戦闘フィールドに仮表示する — 検証: EditMode テスト、Editor 画像 — 2026-10-28 `Core/Map/`（`MapData` ほか）、`Runtime/BattleFieldView`（グレーボックス）、`Data/Tables/maps/w1.csv`（9×6、出現口 S1=(0,1)、ゴール E=(8,4)）、`map_paths.csv` に `kind`（ground/air）列を追加し地上 g1・空中 a1 を定義。検査はファイル名・行・列つき（未知記号、出現口/ゴールの有無、経路の始点・終点・隣接・order・kind、地上経路が X/H を通らない、map_id 対応）。**spec に無い追加**: 地上経路は高台 H も通れない（D-25）。MapTests 12件、EditMode 合計118件成功、ハーネス8件成功、720×1280 のスクリーンショットで確認。レビュー提案（任意、後で対応）: 終点エラーが先頭行を指す、全出現口に経路があるかの検査なし、`AddPaths` が public、`ReadTable` はファイル名のみで照合（`maps/` と `AllFiles` の同名に注意）、MapTests の穴（S 重複、見出し乱れ、kind 混在、メッセージ検査）、孤児の `FieldPlaceholder.mat` を Editor 経由で削除
-- [ ] T202 (FR-020, FR-021, FR-022) `units.csv` と、召喚（コイン消費、配置上限、種類ごとの待ち時間）を作る — 検証: EditMode テスト（AC-020）
+- [x] T202 (FR-020, FR-021, FR-022) `units.csv` と、召喚（コイン消費、配置上限、種類ごとの待ち時間）を作る — 検証: EditMode テスト（AC-020） — 2026-10-28 `Core/Units/`（`UnitTable` の読み込みと検査、`UnitSummoner.TrySummon/Tick/ReleaseSlot/IgnoreCooldown`、`SummonResult`）。`units.csv` は5職の仮値（cost/cooldown は plan の値、ステータスは仮）。拒否の優先順は配置上限→待ち時間→コイン、失敗時はコイン・待ち時間・配置数が変わらない。待ち時間は成功した召喚から始まる。SummonTests 13件、EditMode 合計131件成功、ハーネス8件成功。**未決（後続で決める）**: 職と配置・ブロック数の整合検査（T203/T205）、healer/buffer の atk の意味（T206）、無料ストックの費用・待ち時間（T304）。任意の改善: `Tick` が負・NaN を弾かない、CSV の `Infinity` を通す、SummonTests:206 の置換が改行コードに依存
 - [ ] T203 (FR-023) 配置マス種別の制限と、向き（4方向）による攻撃範囲の回転を作る — 検証: EditMode テスト（AC-021）
 - [ ] T204 (FR-030, FR-031, FR-032) `enemies.csv`・`waves.csv` と、敵3種の出現・経路移動・空中移動・攻撃を作る — 検証: EditMode テスト
 - [ ] T205 (FR-027) ブロック（ブロック数、ブロック消費、空中は不可）と、ブロックされた敵の攻撃を作る — 検証: EditMode テスト（AC-021）

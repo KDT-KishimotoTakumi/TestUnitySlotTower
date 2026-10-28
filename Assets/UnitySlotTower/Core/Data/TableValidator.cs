@@ -33,6 +33,7 @@ namespace UnitySlotTower.Core.Data
                         throw new CsvException(file, 1, column, "必須の列がありません");
             }
             // 読み込み時に型・範囲・参照を検査し、問題があれば CsvException を投げる
+            var units = tables.Units;
             var slotReels = tables.SlotReels;
             var slotPayouts = tables.SlotPayouts;
             var slotRules = tables.SlotRules;

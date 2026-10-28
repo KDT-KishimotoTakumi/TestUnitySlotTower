@@ -4,6 +4,7 @@ using System.IO;
 using UnitySlotTower.Core.Csv;
 using UnitySlotTower.Core.Map;
 using UnitySlotTower.Core.Slot;
+using UnitySlotTower.Core.Units;
 
 namespace UnitySlotTower.Core.Data
 {
@@ -53,6 +54,9 @@ namespace UnitySlotTower.Core.Data
         public CsvTable Get(string file) => tables[file];
 
         public GameConfig GameConfig => GameConfig.FromTable(Get(GameConfigFile));
+
+        /// <summary>味方の定義（呼ぶたびに作り直す）。</summary>
+        public UnitTable Units => UnitTable.FromTable(Get(UnitsFile));
 
         public SlotReels SlotReels => SlotReels.FromTable(Get(SlotReelsFile));
 

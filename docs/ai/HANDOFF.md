@@ -23,7 +23,10 @@
 - T110 はコミット済み（`fa7e292`）だが手動確認待ちのため tasks.md は未完了のまま。
 - T201（マップ）: `Core/Map/MapData`（グリッド＋経路、`TableSet.Maps` は呼ぶたび作り直すのでループ内で呼ばない）、`Runtime/BattleFieldView`（Awake で生成するグレーボックス）。`TableSet.MapFiles` に "maps/w1.csv"。w2 以降は MapFiles に足してビルダーを再実行。`PresentationCatalog.ReadTable` はファイル名のみで照合するので `maps/` と `AllFiles` で同名を作らない。マップ記号は G/H/X/S1〜/E、`map_paths.csv` の `kind` は ground/air。地上経路は H も不可。旧 `Art/Materials/FieldPlaceholder.mat` は孤児（Editor 経由で削除可）。
 - Reload Domain 無効（`ProjectSettings/EditorSettings.asset`）のため、`InputActionAsset` に null コールバックが残ると次の Play から NRE が出る。MonoBehaviour の OnEnable で購読するコールバックは Awake の失敗しうる処理より前に作る（`SlotCabinetView` はそうした）。すでに汚れたら `RequestScriptReload` かスクリプト再コンパイルで直る。
-- 次の一手: プレイヤーによる T110 の手動確認（目押し・先バレ）。並行して T202（`units.csv` と召喚）以降の M2 を進める。
+- T110 は手動確認済みで完了（先バレは高速点滅＋筐体発光＋アルペジオ。音は未試聴、8Hz が強ければ `PremonitionBlinkHz`）。M1 完了。
+- T202（召喚）: `Core/Units/UnitSummoner(UnitTable, Wallet, maxDeployed)`。`TrySummon(id)` → `SummonResult`（優先順は配置上限→待ち時間→コイン）、`Tick(dt)`、`ReleaseSlot()`（撤退・消滅時に呼ぶ）、`IgnoreCooldown`（準備中用、T304）。`units.csv` は5職の仮値、`unit_ranges.csv`（T203）と `unit_upgrades.csv`（T303）はまだ空。配置先マスと向きの引数は T203 で足す。
+- `Art/Materials/Field*.mat` に未コミット差分が出る（シーンビルダーが `_Color` を `_BaseColor` に合わせる副作用、無害）。
+- 次の一手: T203（配置マス種別の制限と向き4方向による攻撃範囲の回転、`unit_ranges.csv`）→ T204 以降の M2。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
