@@ -19,6 +19,9 @@ namespace UnitySlotTower.Runtime
         private const float CylinderHeightPerScale = 2f;
         private const float Half = 0.5f;
 
+        // 手前（高い面）から順に調べる
+        private static readonly float[] PickHeights = { BlockedHeight, HighHeight, GroundHeight };
+
         [SerializeField] private PresentationCatalog catalog;
         [SerializeField] private string mapId = "w1";
         [SerializeField] private Material groundMaterial;
@@ -36,6 +39,30 @@ namespace UnitySlotTower.Runtime
 
         /// <summary>マスの上面の高さ（その上に立つ味方・敵の足元）。</summary>
         public float SurfaceHeight(GridPoint cell) => CellHeight(Map.GetCell(cell));
+
+        /// <summary>
+        /// ワールド座標の光線が指すマス（T208 のドラッグ・クリックの位置→マス変換）。各マスの上面の高さの水平面との交点で調べ、
+        /// 手前（高い面）から順に見る。確保なし。マップ外・どのマスにも当たらないときは false。
+        /// </summary>
+        public bool TryPickCell(Vector3 worldOrigin, Vector3 worldDirection, out GridPoint cell)
+        {
+            cell = default;
+            if (Map == null) return false;
+            var origin = transform.InverseTransformPoint(worldOrigin);
+            var direction = transform.InverseTransformDirection(worldDirection);
+            var geometry = Geometry;
+            for (var i = 0; i < PickHeights.Length; i++)
+            {
+                if (!geometry.TryRayToCell(origin, direction, PickHeights[i], out var candidate)) continue;
+                if (!Map.Contains(candidate)) continue;
+                if (Mathf.Approximately(SurfaceHeight(candidate), PickHeights[i]))
+                {
+                    cell = candidate;
+                    return true;
+                }
+            }
+            return false;
+        }
 
         private void Awake()
         {

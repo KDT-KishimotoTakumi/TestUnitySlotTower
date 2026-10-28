@@ -4,6 +4,10 @@
     "references": [
         "UnitySlotTower.Core",
         "UnitySlotTower.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

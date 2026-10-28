@@ -64,6 +64,8 @@ namespace UnitySlotTower.Runtime
         public UnitSummoner Summoner { get; private set; }
         public PlayerLife Life { get; private set; }
         public Wallet Wallet { get; private set; }
+        /// <summary>味方の表（行の順が召喚アイコン・数字キーの順）。Start 前は null。</summary>
+        public UnitTable Units => unitTable;
 
         private void Awake()
         {
@@ -93,6 +95,8 @@ namespace UnitySlotTower.Runtime
             var ranges = tables.UnitRanges;
             var schedule = tables.Waves.CreateSchedule(wave);
 
+            if (cabinet != null && cabinet.Wallet == null)
+                Debug.LogWarning("BattleRunner: 筐体の Wallet がまだありません。別の財布を使います（スロットとコインが共有されません）", this);
             Wallet = cabinet != null && cabinet.Wallet != null ? cabinet.Wallet : new Wallet(config.InitialCoins);
             Board = new PlacementBoard(map);
             Enemies = new EnemyField(Board, schedule);
@@ -119,6 +123,7 @@ namespace UnitySlotTower.Runtime
         /// <summary>シミュレーションを seconds 秒ぶん一気に進める（確認用。通常のフレーム駆動と同じ固定ステップ）。</summary>
         public void FastForward(float seconds)
         {
+            if (Simulation == null) return;
             var steps = Mathf.RoundToInt(seconds * SimClock.StepsPerSecond);
             for (var i = 0; i < steps; i++) Step();
         }
@@ -145,11 +150,30 @@ namespace UnitySlotTower.Runtime
             return placedCount;
         }
 
-        /// <summary>マス (x, y) の味方の攻撃範囲を強調する。味方がいなければ消す（T208 の選択が使う表示の入口）。</summary>
-        public void ShowRangeAt(int x, int y) => view.ShowRange(Board.GetAt(new GridPoint(x, y)));
+        /// <summary>マス (x, y) の味方の攻撃範囲を強調する。味方がいなければ消す（T208 の選択が使う表示の入口）。Start 前は何もしない。</summary>
+        public void ShowRangeAt(int x, int y)
+        {
+            if (Simulation == null) return;
+            view.ShowRange(Board.GetAt(new GridPoint(x, y)));
+        }
 
-        public void ShowRange(PlacedUnit unit) => view.ShowRange(unit);
+        public void ShowRange(PlacedUnit unit)
+        {
+            if (Simulation == null) return;
+            view.ShowRange(unit);
+        }
 
-        public void ClearRange() => view.ClearRange();
+        /// <summary>配置前の味方（種類・マス・向き）の攻撃範囲を強調する（T208 のドラッグ中の表示）。</summary>
+        public void ShowRangePreview(UnitDef unit, GridPoint cell, Facing facing)
+        {
+            if (Simulation == null) return;
+            view.ShowRangePreview(new PlacedUnit(unit, cell, facing));
+        }
+
+        public void ClearRange()
+        {
+            if (Simulation == null) return;
+            view.ClearRange();
+        }
     }
 }

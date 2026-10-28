@@ -85,6 +85,38 @@ namespace UnitySlotTower.EditorTools
         private const float SymbolFontSize = 110f;
         private const float MinAutoFontSize = 10f;
 
+        // 配置の入力（T208）: 操作バーの召喚アイコンと、フィールド上の印
+        private static readonly Color PlacementValidColor = new Color(0.2f, 0.9f, 0.3f);
+        private static readonly Color PlacementInvalidColor = new Color(0.95f, 0.15f, 0.15f);
+        private static readonly Color PlacementArrowColor = new Color(0.9f, 0.9f, 0.9f);
+        private static readonly Color PlacementArrowOnColor = new Color(1f, 0.85f, 0.1f);
+        private static readonly Color CooldownFillColor = new Color(0f, 0f, 0f, 0.55f);
+        private static readonly Color KeyLabelColor = new Color(1f, 1f, 1f, 0.7f);
+        private const string RoundedSpritePath = "UI/Skin/UISprite.psd";
+        private const string CircleSpritePath = "UI/Skin/Knob.psd";
+        private const float IconLeft = 0.01f;
+        private const float IconStride = 0.15f;
+        private const float IconWidth = 0.14f;
+        private const float IconBottom = 0.08f;
+        private const float IconTop = 0.92f;
+        private const float BodyLeft = 0.06f;
+        private const float BodyRight = 0.46f;
+        private const float BodyBottom = 0.12f;
+        private const float BodyTop = 0.88f;
+        private const float CapsuleLeft = 0.14f;
+        private const float CapsuleRight = 0.38f;
+        private const float DiamondAngle = 45f;
+        private const float DiamondScale = 0.75f;
+        private const float CostLeft = 0.48f;
+        private const float CostBottom = 0.05f;
+        private const float KeyRight = 0.4f;
+        private const float KeyBottom = 0.55f;
+        private const float DeployedLeft = 0.78f;
+        private const float DeployedRight = 0.99f;
+        private const float DeployedFontSize = 60f;
+        private const float IconCostFontSize = 50f;
+        private const float IconKeyFontSize = 28f;
+
         [MenuItem("Tools/UnitySlotTower/Build Game Scene")]
         public static void Build()
         {
@@ -92,13 +124,14 @@ namespace UnitySlotTower.EditorTools
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             CreateBackdropCamera();
-            var battleArea = CreateCanvas(out var slotArea);
+            var battleArea = CreateCanvas(out var slotArea, out var operationBar);
             CreateEventSystem();
             var cabinet = CreateSlotCabinet(slotArea, catalog);
             var battleCamera = CreateBattleCamera(battleArea);
             CreateLight();
             var field = CreateField(catalog);
-            CreateBattle(catalog, field, cabinet, battleCamera);
+            var runner = CreateBattle(catalog, field, cabinet, battleCamera);
+            CreatePlacementUi(operationBar, runner, field, battleCamera);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -143,7 +176,7 @@ namespace UnitySlotTower.EditorTools
         }
 
         /// <summary>キャンバスと PlayArea（9:16 枠）を作り、戦闘領域の RectTransform を返す。</summary>
-        private static RectTransform CreateCanvas(out RectTransform slotArea)
+        private static RectTransform CreateCanvas(out RectTransform slotArea, out RectTransform operationBar)
         {
             var canvasObject = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasObject.layer = LayerMask.NameToLayer("UI");
@@ -164,6 +197,7 @@ namespace UnitySlotTower.EditorTools
             var battle = CreateRect("BattleViewport", playArea, new Vector2(0f, battleBottom), Vector2.one);
             var bar = CreateRect("OperationBar", playArea, new Vector2(0f, barBottom), new Vector2(1f, battleBottom));
             bar.gameObject.AddComponent<Image>().color = OperationBarColor;
+            operationBar = bar;
             slotArea = CreateRect("SlotArea", playArea, Vector2.zero, new Vector2(1f, barBottom));
             slotArea.gameObject.AddComponent<Image>().color = SlotAreaColor;
             return battle;
@@ -373,7 +407,7 @@ namespace UnitySlotTower.EditorTools
         }
 
         /// <summary>戦闘の実行役と表示（グレーボックス）。味方・敵の実体は Play 時に BattleView がプールから出す。T209。</summary>
-        private static void CreateBattle(PresentationCatalog catalog, BattleFieldView field, SlotCabinetView cabinet, Camera battleCamera)
+        private static BattleRunner CreateBattle(PresentationCatalog catalog, BattleFieldView field, SlotCabinetView cabinet, Camera battleCamera)
         {
             var go = new GameObject("Battle");
             var view = go.AddComponent<BattleView>();
@@ -404,6 +438,89 @@ namespace UnitySlotTower.EditorTools
             runnerSerialized.FindProperty("view").objectReferenceValue = view;
             runnerSerialized.FindProperty("cabinet").objectReferenceValue = cabinet;
             runnerSerialized.ApplyModifiedPropertiesWithoutUndo();
+            return runner;
+        }
+
+        /// <summary>配置の入力（T208）。操作バーの召喚アイコン、フィールド上の印、入力の受け口を作る。</summary>
+        private static void CreatePlacementUi(RectTransform bar, BattleRunner runner, BattleFieldView field, Camera battleCamera)
+        {
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);
+            var roles = (UnitRole[])System.Enum.GetValues(typeof(UnitRole));
+            var icons = new SummonIcon[roles.Length];
+            for (var i = 0; i < icons.Length; i++) icons[i] = CreateSummonIcon(i, roles[i], bar, font);
+            var deployedText = CreateLabel("DeployedText", bar, new Vector2(DeployedLeft, IconBottom), new Vector2(DeployedRight, IconTop),
+                "0", DeployedFontSize, DisplayTextColor, font);
+
+            var go = new GameObject("Placement");
+            var markers = go.AddComponent<PlacementMarkerView>();
+            var markersSerialized = new SerializedObject(markers);
+            markersSerialized.FindProperty("validMaterial").objectReferenceValue = GetFieldMaterial("PlacementValid", PlacementValidColor);
+            markersSerialized.FindProperty("invalidMaterial").objectReferenceValue = GetFieldMaterial("PlacementInvalid", PlacementInvalidColor);
+            markersSerialized.FindProperty("arrowMaterial").objectReferenceValue = GetFieldMaterial("PlacementArrow", PlacementArrowColor);
+            markersSerialized.FindProperty("arrowSelectedMaterial").objectReferenceValue = GetFieldMaterial("PlacementArrowOn", PlacementArrowOnColor);
+            markersSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var input = go.AddComponent<PlacementInput>();
+            var serialized = new SerializedObject(input);
+            serialized.FindProperty("runner").objectReferenceValue = runner;
+            serialized.FindProperty("field").objectReferenceValue = field;
+            serialized.FindProperty("battleCamera").objectReferenceValue = battleCamera;
+            serialized.FindProperty("inputActions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            serialized.FindProperty("markers").objectReferenceValue = markers;
+            SetArray(serialized.FindProperty("icons"), icons);
+            serialized.FindProperty("deployedText").objectReferenceValue = deployedText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>召喚アイコン 1 つ。色と形が職、数字がコスト。形は 職ごとにグレーボックスの体（立方体／円柱／菱形／球／カプセル）に合わせる。</summary>
+        private static SummonIcon CreateSummonIcon(int index, UnitRole role, RectTransform bar, TMP_FontAsset font)
+        {
+            var left = IconLeft + index * IconStride;
+            var root = CreateRect($"SummonIcon{index}", bar, new Vector2(left, IconBottom), new Vector2(left + IconWidth, IconTop));
+            var frame = root.gameObject.AddComponent<Image>();
+            frame.color = SummonIcon.FrameOff;
+            frame.raycastTarget = true;   // アイコン全体を押せる当たりにする（子の見た目は当たりに含めない）
+
+            var bodyRect = CreateRect("Body", root, new Vector2(BodyLeft, BodyBottom), new Vector2(BodyRight, BodyTop));
+            var body = bodyRect.gameObject.AddComponent<Image>();
+            body.color = UnitColor(role);
+            body.raycastTarget = false;
+            switch (role)
+            {
+                case UnitRole.Swordsman:
+                    body.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+                    body.type = Image.Type.Sliced;
+                    break;
+                case UnitRole.Archer:
+                    bodyRect.localRotation = Quaternion.Euler(0f, 0f, DiamondAngle);
+                    bodyRect.localScale = Vector3.one * DiamondScale;
+                    break;
+                case UnitRole.Healer:
+                    body.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(CircleSpritePath);
+                    break;
+                case UnitRole.Buffer:
+                    bodyRect.anchorMin = new Vector2(CapsuleLeft, BodyBottom);
+                    bodyRect.anchorMax = new Vector2(CapsuleRight, BodyTop);
+                    body.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+                    body.type = Image.Type.Sliced;
+                    break;
+            }
+
+            var dim = CreateImage("Dim", root, Vector2.zero, Vector2.one, SummonIcon.DimClear);
+            var fill = CreateImage("CooldownFill", root, Vector2.zero, new Vector2(1f, 0f), CooldownFillColor).rectTransform;
+            var costText = CreateLabel("CostText", root, new Vector2(CostLeft, CostBottom), new Vector2(1f, 1f), "0", IconCostFontSize, SummonIcon.CostNormal, font);
+            var keyText = CreateLabel("KeyText", root, new Vector2(0f, KeyBottom), new Vector2(KeyRight, 1f), "0", IconKeyFontSize, KeyLabelColor, font);
+
+            var icon = root.gameObject.AddComponent<SummonIcon>();
+            var serialized = new SerializedObject(icon);
+            serialized.FindProperty("body").objectReferenceValue = body;
+            serialized.FindProperty("dim").objectReferenceValue = dim;
+            serialized.FindProperty("cooldownFill").objectReferenceValue = fill;
+            serialized.FindProperty("frame").objectReferenceValue = frame;
+            serialized.FindProperty("costText").objectReferenceValue = costText;
+            serialized.FindProperty("keyText").objectReferenceValue = keyText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return icon;
         }
 
         private static Color UnitColor(UnitRole role)

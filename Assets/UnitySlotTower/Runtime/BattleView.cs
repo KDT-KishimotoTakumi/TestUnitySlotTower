@@ -109,10 +109,21 @@ namespace UnitySlotTower.Runtime
             for (var i = rangeCells.Count; i < rangeMarkers.Count; i++) rangeMarkers[i].gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// まだ置いていない味方（配置前のプレビュー）の攻撃範囲を強調する。盤上にいないので、倒れた味方の範囲を消す判定の対象にしない。
+        /// ClearRange か別の ShowRange で切り替わる。
+        /// </summary>
+        public void ShowRangePreview(PlacedUnit hypothetical)
+        {
+            ShowRange(hypothetical);
+            rangeOwner = null;
+        }
+
         public void ClearRange()
         {
             rangeOwner = null;
-            for (var i = 0; i < rangeMarkers.Count; i++) rangeMarkers[i].gameObject.SetActive(false);
+            for (var i = 0; i < rangeMarkers.Count; i++)
+                if (rangeMarkers[i] != null) rangeMarkers[i].gameObject.SetActive(false);
         }
 
         private void LateUpdate()
