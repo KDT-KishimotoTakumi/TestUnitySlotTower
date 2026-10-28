@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnitySlotTower.Core.Csv;
+using UnitySlotTower.Core.Enemies;
 using UnitySlotTower.Core.Map;
 using UnitySlotTower.Core.Slot;
 using UnitySlotTower.Core.Units;
@@ -60,6 +61,12 @@ namespace UnitySlotTower.Core.Data
 
         /// <summary>味方ごとの攻撃範囲（呼ぶたびに作り直す）。</summary>
         public UnitRangeTable UnitRanges => UnitRangeTable.FromTable(Get(UnitRangesFile), Units);
+
+        /// <summary>敵の定義（呼ぶたびに作り直す）。</summary>
+        public EnemyTable Enemies => EnemyTable.FromTable(Get(EnemiesFile));
+
+        /// <summary>ウェーブの出現予定（呼ぶたびに敵・マップごと作り直す）。</summary>
+        public WaveTable Waves => WaveTable.FromTable(Get(WavesFile), Enemies, Maps);
 
         public SlotReels SlotReels => SlotReels.FromTable(Get(SlotReelsFile));
 

@@ -1,1 +1,11 @@
 wave,time,enemy_id,spawn,path_id,is_boss
+1,3,melee_grunt,S1,g1,0
+1,7,melee_grunt,S1,g1,0
+1,11,melee_grunt,S1,g1,0
+1,15,ranged_grunt,S1,g1,0
+1,19,melee_grunt,S1,g1,0
+1,23,air_grunt,S1,a1,0
+1,27,melee_grunt,S1,g1,0
+1,31,ranged_grunt,S1,g1,0
+1,35,air_grunt,S1,a1,0
+1,39,melee_grunt,S1,g1,0

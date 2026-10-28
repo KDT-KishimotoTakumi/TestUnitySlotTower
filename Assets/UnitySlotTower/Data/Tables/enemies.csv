@@ -1,1 +1,4 @@
 id,kind,max_hp,atk,def,attack_interval,move_speed,range,is_air,block_cost,life_damage,drop_chance,drop_min,drop_max
+melee_grunt,melee,100,20,0,1.5,0.5,0,0,1,1,0.4,1,1
+ranged_grunt,ranged,70,16,0,2.0,0.5,2.5,0,1,1,0.5,1,2
+air_grunt,air,60,14,0,1.5,0.7,1.5,1,0,1,0.5,1,2
