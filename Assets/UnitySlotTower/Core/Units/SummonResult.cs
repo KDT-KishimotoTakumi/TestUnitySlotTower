@@ -7,5 +7,9 @@ namespace UnitySlotTower.Core.Units
         NotEnoughCoins,
         DeployLimit,
         Cooldown,
+        // 以下は配置先を指定した召喚で、配置先が不正なとき（判定は 配置先 → 配置上限 → 待ち時間 → コイン）
+        OutOfMap,
+        WrongCellType,
+        CellOccupied,
     }
 }

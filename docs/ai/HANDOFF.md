@@ -26,7 +26,8 @@
 - T110 は手動確認済みで完了（先バレは高速点滅＋筐体発光＋アルペジオ。音は未試聴、8Hz が強ければ `PremonitionBlinkHz`）。M1 完了。
 - T202（召喚）: `Core/Units/UnitSummoner(UnitTable, Wallet, maxDeployed)`。`TrySummon(id)` → `SummonResult`（優先順は配置上限→待ち時間→コイン）、`Tick(dt)`、`ReleaseSlot()`（撤退・消滅時に呼ぶ）、`IgnoreCooldown`（準備中用、T304）。`units.csv` は5職の仮値、`unit_ranges.csv`（T203）と `unit_upgrades.csv`（T303）はまだ空。配置先マスと向きの引数は T203 で足す。
 - `Art/Materials/Field*.mat` に未コミット差分が出る（シーンビルダーが `_Color` を `_BaseColor` に合わせる副作用、無害）。
-- 次の一手: T203（配置マス種別の制限と向き4方向による攻撃範囲の回転、`unit_ranges.csv`）→ T204 以降の M2。
+- T203（配置と向き）: `Core/Map/Facing`（Right 基準、時計回り）、`PlacementBoard`（`Check/TryPlace/Remove/GetAt`）、`UnitRangeTable.GetCells(PlacedUnit, MapData, results)`、`UnitSummoner.TrySummon(id, board, cell, facing, out unit)`。`unit_ranges.csv` は `unit_id,dx,dy`（Right 向き、(0,0)=自マス、全職必須）。撤退・消滅では `PlacementBoard.Remove(cell)` と `UnitSummoner.ReleaseSlot()` の両方が要る（T205/T302 で窓口を1か所に）。`TableSet.UnitRanges` などの表は呼ぶたび作り直すので戦闘開始時に1度だけ取って保持する。コマンドは `editor poll-test <id>`。
+- 次の一手: T204（`enemies.csv`・`waves.csv`、敵3種の出現・経路移動・空中移動・攻撃）→ T205 以降の M2。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）

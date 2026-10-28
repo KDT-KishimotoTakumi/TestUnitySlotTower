@@ -1,11 +1,12 @@
 using System;
 using UnitySlotTower.Core.Economy;
+using UnitySlotTower.Core.Map;
 
 namespace UnitySlotTower.Core.Units
 {
     /// <summary>
     /// 召喚（FR-020〜FR-022）。コイン消費、同時配置数の上限、種類ごとの待ち時間を管理する。
-    /// 配置先のマスと向きは T203 で扱う。判定の順は 配置上限 → 待ち時間 → コイン。
+    /// 判定の順は 配置先（配置先つきの TrySummon のみ）→ 配置上限 → 待ち時間 → コイン。
     /// </summary>
     public sealed class UnitSummoner
     {
@@ -39,6 +40,25 @@ namespace UnitySlotTower.Core.Units
             DeployedCount++;
             if (!IgnoreCooldown) cooldownRemaining[index] = unit.Cooldown;
             return SummonResult.Success;
+        }
+
+        /// <summary>
+        /// 種類 unitId を、マス cell に向き facing で召喚する。配置先が不正なら他の判定より先に拒否する。
+        /// 成功すると board に置いて placed を返す。失敗時は何も変わらない。
+        /// </summary>
+        public SummonResult TrySummon(string unitId, PlacementBoard board, GridPoint cell, Facing facing, out PlacedUnit placed)
+        {
+            var unit = table.Get(unitId);
+            placed = null;
+            switch (board.Check(unit, cell))
+            {
+                case PlacementResult.OutOfMap: return SummonResult.OutOfMap;
+                case PlacementResult.WrongCellType: return SummonResult.WrongCellType;
+                case PlacementResult.Occupied: return SummonResult.CellOccupied;
+            }
+            var result = TrySummon(unitId);
+            if (result == SummonResult.Success) board.TryPlace(unit, cell, facing, out placed);
+            return result;
         }
 
         /// <summary>種類 unitId の残り待ち時間（秒）。0 なら召喚できる。</summary>

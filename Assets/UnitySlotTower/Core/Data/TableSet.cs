@@ -58,6 +58,9 @@ namespace UnitySlotTower.Core.Data
         /// <summary>味方の定義（呼ぶたびに作り直す）。</summary>
         public UnitTable Units => UnitTable.FromTable(Get(UnitsFile));
 
+        /// <summary>味方ごとの攻撃範囲（呼ぶたびに作り直す）。</summary>
+        public UnitRangeTable UnitRanges => UnitRangeTable.FromTable(Get(UnitRangesFile), Units);
+
         public SlotReels SlotReels => SlotReels.FromTable(Get(SlotReelsFile));
 
         public SlotPayoutTable SlotPayouts => SlotPayoutTable.FromTable(Get(SlotPayoutsFile));
