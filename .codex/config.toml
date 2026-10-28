@@ -1,0 +1,13 @@
+# Codex: Unity MCP is reachable only while scripts/unity automation is running (on demand).
+[mcp_servers.unityMCP]
+url = "http://127.0.0.1:8080/mcp"
+startup_timeout_sec = 30
+tool_timeout_sec = 180
+# Keep routine tool discovery focused; other capabilities remain available via the CLI wrapper.
+enabled_tools = [
+  "set_active_instance", "manage_editor", "manage_scene", "find_gameobjects",
+  "manage_gameobject", "manage_components", "manage_asset", "manage_prefabs",
+  "manage_material", "manage_camera", "manage_ui", "manage_build",
+  "read_console", "refresh_unity", "run_tests", "get_test_job",
+  "execute_menu_item", "batch_execute", "manage_tools"
+]

@@ -1,0 +1,7 @@
+key,value
+initial_coins,30
+bet,3
+starting_life,10
+life_bonus_per_life,3
+max_deployed,8
+refund_rate,0.5

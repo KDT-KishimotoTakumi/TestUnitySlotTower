@@ -1,0 +1,23 @@
+{
+  "env": {
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1"
+  },
+  "permissions": {
+    "allow": [
+      "PowerShell(pwsh -NoProfile -File scripts/harness/Test-ProjectHarness.ps1)",
+      "PowerShell(pwsh -NoProfile -File scripts/unity/Test-UnityConnection.ps1)",
+      "PowerShell(pwsh -NoProfile -File scripts/unity/Stop-UnityAutomation.ps1)",
+      "PowerShell(git status:*)",
+      "PowerShell(git diff:*)",
+      "PowerShell(git log:*)"
+    ],
+    "deny": [
+      "Read(./Library/**)",
+      "Read(./Temp/**)",
+      "Read(./Obj/**)",
+      "Read(./.tools/**)",
+      "Read(./*.csproj)",
+      "Read(./*.sln)"
+    ]
+  }
+}

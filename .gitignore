@@ -66,3 +66,22 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emory[Cc]aptures/
+*.csproj
+*.sln
+*.slnx
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Project automation outputs
+/.tools/
+/Artifacts/
+/Builds/
