@@ -191,7 +191,9 @@ namespace UnitySlotTower.Tests
             yield return null;
             yield return Tap(keyboard.digit1Key);
             Assert.AreEqual(PlacementPhase.Idle, input.Controller.Phase, "Shift+数字は強化用で召喚選択は無視");
+            Assert.AreEqual(2, runner.Upgrades.GetLevel(runner.Units.Units[0].Id), "Shift+数字で強化される");
             Release(keyboard.leftShiftKey);
+            runner.Wallet.Add(InitialCoins);   // 強化で減ったコインを戻し、召喚の選択が通るようにする
             yield return null;
 
             yield return Tap(keyboard.digit1Key);

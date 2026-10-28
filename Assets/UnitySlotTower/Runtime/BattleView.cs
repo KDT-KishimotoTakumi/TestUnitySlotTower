@@ -136,7 +136,7 @@ namespace UnitySlotTower.Runtime
             for (var i = 0; i < units.Count; i++)
             {
                 var unit = units[i];
-                unitViews.Get(unit).Refresh(HpGauge.Ratio(unit.Hp, unit.Def.MaxHp), cameraRotation);
+                unitViews.Get(unit).Refresh(HpGauge.Ratio(unit.Hp, unit.MaxHp), cameraRotation);
             }
             unitViews.EndFrame();
 

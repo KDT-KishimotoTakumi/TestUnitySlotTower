@@ -62,6 +62,7 @@ namespace UnitySlotTower.Runtime
         public EnemyField Enemies { get; private set; }
         public BattleSimulation Simulation { get; private set; }
         public UnitSummoner Summoner { get; private set; }
+        public UnitUpgrades Upgrades { get; private set; }
         public PlayerLife Life { get; private set; }
         public Wallet Wallet { get; private set; }
         /// <summary>味方の表（行の順が召喚アイコン・数字キーの順）。Start 前は null。</summary>
@@ -101,6 +102,7 @@ namespace UnitySlotTower.Runtime
             Board = new PlacementBoard(map);
             Enemies = new EnemyField(Board, schedule);
             Summoner = new UnitSummoner(unitTable, Wallet, config.MaxDeployed);
+            Upgrades = new UnitUpgrades(tables.UnitUpgrades, Wallet, Board);
             Life = new PlayerLife(config.StartingLife);
             Simulation = new BattleSimulation(Board, Enemies, Summoner, ranges, config.BufferAtkMultiplier,
                 Life, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks ^ DropSeedSalt), config.RefundRate);

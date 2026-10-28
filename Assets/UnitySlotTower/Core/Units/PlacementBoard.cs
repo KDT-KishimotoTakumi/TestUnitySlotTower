@@ -15,6 +15,9 @@ namespace UnitySlotTower.Core.Units
 
         public MapData Map { get; }
 
+        /// <summary>味方が置かれた（ステータスの初期値のまま。強化の反映などに使う）。</summary>
+        public event Action<PlacedUnit> UnitPlaced;
+
         /// <summary>置かれている味方（置いた順）。</summary>
         public IReadOnlyList<PlacedUnit> Units => units;
 
@@ -45,6 +48,7 @@ namespace UnitySlotTower.Core.Units
             placed = new PlacedUnit(unit, cell, facing);
             occupants[cell.X, cell.Y] = placed;
             units.Add(placed);
+            UnitPlaced?.Invoke(placed);
             return PlacementResult.Ok;
         }
 

@@ -164,8 +164,14 @@ namespace UnitySlotTower.Runtime
         private void PollKeyboard()
         {
             var shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+            var units = runner.Units.Units;
             for (var i = 0; i < MaxIcons; i++)
-                if (summonActions[i].WasPressedThisFrame()) controller.SelectByKey(i, shift);
+            {
+                if (!summonActions[i].WasPressedThisFrame()) continue;
+                // Shift+数字は強化（T303）。召喚の選択は Shift 中は無視される
+                if (shift && i < units.Count) runner.Upgrades.TryUpgrade(units[i].Id);
+                controller.SelectByKey(i, shift);
+            }
 
             // 矢印は押した瞬間に 1 マス（押しっぱなしでは進まない）。上は y が減る向き
             var move = cursorMoveAction.ReadValue<Vector2>();

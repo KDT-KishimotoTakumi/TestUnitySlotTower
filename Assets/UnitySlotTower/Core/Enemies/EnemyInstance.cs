@@ -98,7 +98,7 @@ namespace UnitySlotTower.Core.Enemies
                 AttackTimer = 0f;
                 return false;
             }
-            target.TakeDamage(DamageFormula.Calculate(Def.Atk, target.Def.Def));
+            target.TakeDamage(DamageFormula.Calculate(Def.Atk, target.Defense));
             AttackTimer += Def.AttackInterval;
             return true;
         }

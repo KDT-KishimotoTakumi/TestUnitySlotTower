@@ -35,6 +35,7 @@ namespace UnitySlotTower.Core.Data
             // 読み込み時に型・範囲・参照を検査し、問題があれば CsvException を投げる
             var units = tables.Units;
             var unitRanges = tables.UnitRanges;
+            var unitUpgrades = tables.UnitUpgrades;
             var slotReels = tables.SlotReels;
             var slotPayouts = tables.SlotPayouts;
             var slotRules = tables.SlotRules;

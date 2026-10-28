@@ -8,6 +8,12 @@ namespace UnitySlotTower.Core.Units
         public UnitDef Def { get; }
         public GridPoint Cell { get; }
         public Facing Facing { get; }
+        /// <summary>強化の段階（強化前は 1）。</summary>
+        public int Level { get; private set; } = 1;
+        /// <summary>強化込みの最大HP・攻撃力（バフ前）・防御力。</summary>
+        public float MaxHp { get; private set; }
+        public float BaseAtk { get; private set; }
+        public float Defense { get; private set; }
         /// <summary>現在のHP。ダメージ式の結果が小数になるので float のまま扱う（切り捨てない）。0 以下で消滅（BattleSimulation が処理）。</summary>
         public float Hp { get; private set; }
         /// <summary>ブロック中の敵が使っているブロック数（敵の block_cost の合計）。上限は Def.Block。</summary>
@@ -16,7 +22,7 @@ namespace UnitySlotTower.Core.Units
         /// <summary>バッファーによる攻撃力の倍率（バフがなければ 1）。BattleSimulation が毎ステップ決め直す。</summary>
         public float AttackMultiplier { get; internal set; } = 1f;
         /// <summary>バフ込みの攻撃力。ヒーラーの回復量にも使う。</summary>
-        public float Atk => Def.Atk * AttackMultiplier;
+        public float Atk => BaseAtk * AttackMultiplier;
         /// <summary>次に攻撃（回復）できるまでの残り時間（秒）。攻撃できる状態では 0 以下。</summary>
         public float AttackTimer { get; internal set; }
 
@@ -25,7 +31,21 @@ namespace UnitySlotTower.Core.Units
             Def = def;
             Cell = cell;
             Facing = facing;
-            Hp = def.MaxHp;
+            MaxHp = def.MaxHp;
+            BaseAtk = def.Atk;
+            Defense = def.Def;
+            Hp = MaxHp;
+        }
+
+        /// <summary>強化の段階に合わせてステータスを再計算する（基本値 × 倍率）。最大HPが増えた分は現在HPにも加える。</summary>
+        internal void ApplyUpgrade(UnitUpgradeStep step)
+        {
+            var maxHp = Def.MaxHp * step.HpMultiplier;
+            if (maxHp > MaxHp) Hp += maxHp - MaxHp;
+            MaxHp = maxHp;
+            BaseAtk = Def.Atk * step.AtkMultiplier;
+            Defense = Def.Def * step.DefMultiplier;
+            Level = step.Level;
         }
 
         /// <summary>HP を amount だけ減らす（0 未満にはしない）。</summary>
@@ -38,7 +58,7 @@ namespace UnitySlotTower.Core.Units
         public float Heal(float amount)
         {
             var before = Hp;
-            Hp = Hp + amount < Def.MaxHp ? Hp + amount : Def.MaxHp;
+            Hp = Hp + amount < MaxHp ? Hp + amount : MaxHp;
             return Hp - before;
         }
 

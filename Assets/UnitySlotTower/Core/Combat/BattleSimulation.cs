@@ -157,8 +157,8 @@ namespace UnitySlotTower.Core.Combat
             for (var k = 0; k < cellBuffer.Count; k++)
             {
                 var ally = board.GetAt(cellBuffer[k]);
-                if (ally == null || ally.Hp <= 0f || ally.Hp >= ally.Def.MaxHp) continue;
-                var ratio = ally.Hp / ally.Def.MaxHp;
+                if (ally == null || ally.Hp <= 0f || ally.Hp >= ally.MaxHp) continue;
+                var ratio = ally.Hp / ally.MaxHp;
                 if (ratio >= bestRatio) continue;
                 best = ally;
                 bestRatio = ratio;

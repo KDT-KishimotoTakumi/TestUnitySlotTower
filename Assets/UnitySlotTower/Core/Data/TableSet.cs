@@ -62,6 +62,9 @@ namespace UnitySlotTower.Core.Data
         /// <summary>味方ごとの攻撃範囲（呼ぶたびに作り直す）。</summary>
         public UnitRangeTable UnitRanges => UnitRangeTable.FromTable(Get(UnitRangesFile), Units);
 
+        /// <summary>味方ごとの強化の段階表（呼ぶたびに作り直す）。</summary>
+        public UnitUpgradeTable UnitUpgrades => UnitUpgradeTable.FromTable(Get(UnitUpgradesFile), Units);
+
         /// <summary>敵の定義（呼ぶたびに作り直す）。</summary>
         public EnemyTable Enemies => EnemyTable.FromTable(Get(EnemiesFile));
 

@@ -44,7 +44,7 @@
 
 - [ ] T301 (FR-011, FR-040) スロットのコインと戦闘のコインを1つの財布に統合し、戦闘中もスロットを回せるようにする — 検証: PlayMode テスト（スロット操作中も敵が進む: AC-011）
 - [x] T302 (FR-025) 撤退と返還（ストック由来を含む） — 検証: EditMode テスト（AC-020） — 2026-10-29 `BattleSimulation.TryRetreat(unit, out refund)`（`RemoveUnit` 経由、`floor(cost × refund_rate)` を財布へ。ストック由来も同式。ctor 末尾に `refundRate`）。UI の撤退操作は未実装（T304 前後）。EditMode 284 件成功
-- [ ] T303 (FR-026) 種類ごとの強化（`unit_upgrades.csv`、配置中と今後の個体への反映） — 検証: EditMode テスト（AC-022）
+- [x] T303 (FR-026) 種類ごとの強化（`unit_upgrades.csv`、配置中と今後の個体への反映） — 検証: EditMode テスト（AC-022） — 2026-10-29 `UnitUpgradeTable`（level 2〜5 連続・倍率は 1 以上）、`UnitUpgrades`（`TryUpgrade`、盤面の同種全個体と今後の個体に反映）、`PlacedUnit.MaxHp/BaseAtk/Defense/Level`、`PlacementBoard.UnitPlaced`。`unit_upgrades.csv` は仮値（倍率 1.2/1.4/1.7/2.0、費用 20/35/55/80）。Shift+数字で強化（失敗の表示なし）。**未実装: 強化のマウス操作（ボタン）と段階・費用の表示、一時停止中の拒否（T307）**。EditMode 303 件成功
 - [ ] T304 (FR-010, FR-014〜016) ウェーブ進行（準備フェーズ、▶で開始、ウェーブ終了でライフボーナス・ストック化・ライフ回復、ストックからの無料配置、準備中は待ち時間なし） — 検証: EditMode テスト（AC-012）
 - [ ] T305 (FR-010) `maps/w2〜w5.csv` と各ウェーブの出現内容を作る — 検証: 経路検証テスト、手動プレイ
 - [ ] T306 (FR-030) 中ボス・最終ボス（高HP、ブロック消費、固有行動1〜2個）と、最終ボス撃破でのクリア — 検証: EditMode テスト（AC-010）
