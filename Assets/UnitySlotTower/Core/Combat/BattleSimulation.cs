@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using UnitySlotTower.Core.Economy;
 using UnitySlotTower.Core.Enemies;
 using UnitySlotTower.Core.Map;
+using UnitySlotTower.Core.Sim;
 using UnitySlotTower.Core.Units;
 
 namespace UnitySlotTower.Core.Combat
@@ -14,7 +16,9 @@ namespace UnitySlotTower.Core.Combat
     ///  3. 味方が置いた順に攻撃・回復する。この時点では敵も味方もまだ消えない
     ///     ＝ 2 で HP が 0 になった味方も、このステップは攻撃・回復する（敵と味方の攻撃は同時）。
     ///     ただし HP が 0 の味方は回復の対象にならず、味方が先に倒した敵は後ろの味方の対象から外れる
-    ///  4. HP が 0 の味方を消し（UnitDefeated）、HP が 0 の敵を一覧から外す（EnemyDefeated。報酬・ドロップは T207）
+    ///  4. HP が 0 の味方を消し（UnitDefeated）、HP が 0 の敵を一覧から外す（EnemyDefeated）。
+    ///     撃破された敵はここでドロップを抽選して財布に加算する（DropGained）
+    /// ゴールに着いた敵は 2 の中で life_damage ぶんライフを減らす（ドロップなし）。ライフが 0 になったステップは最後まで進み、次の Step から何もしない。
     /// 攻撃・回復は 1 ステップに 1 回まで（敵と同じ）。攻撃できる状態で対象がいない間は、待ち時間が 0 で止まる（間隔を溜めない）。
     /// </summary>
     public sealed class BattleSimulation
@@ -27,6 +31,9 @@ namespace UnitySlotTower.Core.Combat
         private readonly List<GridPoint> cellBuffer = new List<GridPoint>();
         private readonly List<PlacedUnit> defeatedUnits = new List<PlacedUnit>();
         private readonly List<EnemyInstance> defeatedEnemies = new List<EnemyInstance>();
+        private readonly PlayerLife life;
+        private readonly Wallet wallet;
+        private readonly EnemyDropRoller dropRoller;
 
         /// <summary>HP が 0 になって消えた味方。RemoveUnit が済んだ後に呼ぶ。</summary>
         public event Action<PlacedUnit> UnitDefeated;
@@ -34,9 +41,14 @@ namespace UnitySlotTower.Core.Combat
         /// <summary>味方に倒されて一覧から外れた敵。ブロックの解放が済んだ後に呼ぶ。</summary>
         public event Action<EnemyInstance> EnemyDefeated;
 
+        /// <summary>撃破ドロップで財布に加算した。引数は倒した敵と加算したコイン（0 枚のときは呼ばない）。</summary>
+        public event Action<EnemyInstance, int> DropGained;
+
         /// <param name="bufferMultiplier">バッファーの攻撃力倍率（game_config.csv の buffer_atk_multiplier）。</param>
+        /// <param name="life">省略するとゴール到達でライフを減らさない。</param>
+        /// <param name="wallet">ドロップの加算先（スロットと共有、T301）。wallet と random は両方渡すか両方省略する（省略するとドロップなし）。</param>
         public BattleSimulation(PlacementBoard board, EnemyField enemies, UnitSummoner summoner, UnitRangeTable ranges,
-            float bufferMultiplier)
+            float bufferMultiplier, PlayerLife life = null, Wallet wallet = null, GameRandom random = null)
         {
             this.board = board ?? throw new ArgumentNullException(nameof(board));
             this.enemies = enemies ?? throw new ArgumentNullException(nameof(enemies));
@@ -44,10 +56,17 @@ namespace UnitySlotTower.Core.Combat
             this.ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
             if (bufferMultiplier < 1f) throw new ArgumentOutOfRangeException(nameof(bufferMultiplier));
             this.bufferMultiplier = bufferMultiplier;
+            if ((wallet == null) != (random == null))
+                throw new ArgumentException("wallet と random は両方渡すか、両方省略してください");
+            this.life = life;
+            this.wallet = wallet;
+            if (random != null) dropRoller = new EnemyDropRoller(random);
+            if (life != null) enemies.ReachedGoal += OnEnemyReachedGoal;
         }
 
         public void Step(float deltaSeconds)
         {
+            if (life != null && life.IsGameOver) return;
             RecomputeBuffs();
             enemies.Tick(deltaSeconds);
 
@@ -167,6 +186,8 @@ namespace UnitySlotTower.Core.Combat
             return false;
         }
 
+        private void OnEnemyReachedGoal(EnemyInstance enemy) => life.TakeDamage(enemy.Def.LifeDamage);
+
         private void SweepDefeated()
         {
             defeatedUnits.Clear();
@@ -181,7 +202,16 @@ namespace UnitySlotTower.Core.Combat
             for (var i = 0; i < active.Count; i++)
                 if (active[i].Hp <= 0f) defeatedEnemies.Add(active[i]);
             for (var i = 0; i < defeatedEnemies.Count; i++)
-                if (enemies.Remove(defeatedEnemies[i])) EnemyDefeated?.Invoke(defeatedEnemies[i]);
+            {
+                var enemy = defeatedEnemies[i];
+                if (!enemies.Remove(enemy)) continue;
+                EnemyDefeated?.Invoke(enemy);
+                if (dropRoller == null) continue;
+                var coins = dropRoller.Roll(enemy.Def);
+                if (coins <= 0) continue;
+                wallet.Add(coins);
+                DropGained?.Invoke(enemy, coins);
+            }
         }
     }
 }
