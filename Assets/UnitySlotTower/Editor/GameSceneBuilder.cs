@@ -564,7 +564,9 @@ namespace UnitySlotTower.EditorTools
 
         private static void ApplyPlayerSettings()
         {
-            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            // 起動時はボーダーレス全画面。Alt+Enter で切り替えたときのウィンドウ寸法が Default* になる
+            PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
+            PlayerSettings.allowFullscreenSwitch = true;
             PlayerSettings.defaultScreenWidth = GameLayout.DefaultWindowWidth;
             PlayerSettings.defaultScreenHeight = GameLayout.DefaultWindowHeight;
             PlayerSettings.resizableWindow = true;
