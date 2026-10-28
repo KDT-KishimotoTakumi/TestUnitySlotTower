@@ -16,7 +16,7 @@ namespace UnitySlotTower.Core.Data
             { TableSet.MapPathsFile, new[] { "map_id", "path_id", "order", "x", "y" } },
             { TableSet.WavesFile, new[] { "wave", "time", "enemy_id", "spawn", "path_id", "is_boss" } },
             { TableSet.SlotReelsFile, new[] { "reel", "position", "symbol" } },
-            { TableSet.SlotPayoutsFile, new[] { "role", "symbols", "payout" } },
+            { TableSet.SlotPayoutsFile, new[] { "role", "symbols", "lines", "payout", "kind" } },
             { TableSet.SlotProbabilitiesFile, new[] { "role", "setting", "state", "probability" } },
             { TableSet.SlotRulesFile, new[] { "key", "value" } },
             { TableSet.SlotPremonitionFile, new[] { "role", "rate" } },
@@ -32,6 +32,10 @@ namespace UnitySlotTower.Core.Data
                     if (!Contains(table.Header, column))
                         throw new CsvException(file, 1, column, "必須の列がありません");
             }
+            // 読み込み時に型・範囲・参照を検査し、問題があれば CsvException を投げる
+            var slotReels = tables.SlotReels;
+            var slotPayouts = tables.SlotPayouts;
+            var slotRules = tables.SlotRules;
             var config = tables.GameConfig;
             if (config.Bet > config.InitialCoins && config.InitialCoins > 0)
                 throw new CsvException(TableSet.GameConfigFile, 0, "value", "掛け金が初期コインを超えています");

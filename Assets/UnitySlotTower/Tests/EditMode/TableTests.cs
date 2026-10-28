@@ -11,7 +11,7 @@ namespace UnitySlotTower.Tests
     {
         private static string TablesDirectory => Path.Combine(Application.dataPath, "UnitySlotTower/Data/Tables");
 
-        private static string ReadFile(string file)
+        internal static string ReadFile(string file)
         {
             var path = Path.Combine(TablesDirectory, file);
             return File.Exists(path) ? File.ReadAllText(path) : null;

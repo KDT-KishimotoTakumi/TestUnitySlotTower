@@ -1,1 +1,7 @@
 key,value
+max_slip,4
+wait_seconds,2
+bonus_big_max_payout,240
+bonus_reg_max_payout,96
+kakuhen_entry_rate,1
+kakuhen_games,100

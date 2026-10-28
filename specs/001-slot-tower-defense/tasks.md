@@ -17,7 +17,7 @@
 
 ## M1 スロット単体
 
-- [ ] T101 (FR-041) `slot_reels.csv`・`slot_payouts.csv`・`slot_rules.csv` の内容（21コマ配列、5ライン、役と払い出し）を作り、読み込む — 検証: 検証テスト
+- [x] T101 (FR-041) `slot_reels.csv`・`slot_payouts.csv`・`slot_rules.csv` の内容（21コマ配列、5ライン、役と払い出し）を作り、読み込む — 検証: 検証テスト — 2026-10-28 `Core/Slot/`（SlotSymbol・SlotLayout・SlotReels・SlotPayoutTable・SlotRules）と CSV 3本。SlotDataTests 10件成功（配列の個数・引き込み間隔・不正データの検出）、EditMode 合計38件成功。配当（BELL 8 / WATERMELON 5 / 角チェリー 2 / 中段チェリー 4 / BIG・REG 0）は仮値で T109 で調整。**配列の「ブランクなしで蹴飛ばせるか」は T103 の全数検査で初めて確認できる**（崩れたら CSV を直す）
 - [ ] T102 (FR-041, FR-045) `slot_probabilities.csv`（役×設定1〜6×状態）と、レバーオン時の内部抽選を作る — 検証: EditMode テスト（固定シード大量試行で確率が表どおり）
 - [ ] T103 (FR-040) 目押しのリール制御（最大4コマ滑り、成立役の引き込み、非成立役の蹴飛ばし）を作る — 検証: EditMode テスト（全フラグ×全停止位置で成立役と出目が一致: AC-041）
 - [ ] T104 (FR-040) ベット＋レバー、所持コイン不足時の拒否、リプレイ、払い出しを作る — 検証: EditMode テスト

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnitySlotTower.Core.Csv;
+using UnitySlotTower.Core.Slot;
 
 namespace UnitySlotTower.Core.Data
 {
@@ -44,5 +45,11 @@ namespace UnitySlotTower.Core.Data
         public CsvTable Get(string file) => tables[file];
 
         public GameConfig GameConfig => GameConfig.FromTable(Get(GameConfigFile));
+
+        public SlotReels SlotReels => SlotReels.FromTable(Get(SlotReelsFile));
+
+        public SlotPayoutTable SlotPayouts => SlotPayoutTable.FromTable(Get(SlotPayoutsFile));
+
+        public SlotRules SlotRules => SlotRules.FromTable(Get(SlotRulesFile));
     }
 }
