@@ -103,7 +103,7 @@ namespace UnitySlotTower.Runtime
             Summoner = new UnitSummoner(unitTable, Wallet, config.MaxDeployed);
             Life = new PlayerLife(config.StartingLife);
             Simulation = new BattleSimulation(Board, Enemies, Summoner, ranges, config.BufferAtkMultiplier,
-                Life, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks ^ DropSeedSalt));
+                Life, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks ^ DropSeedSalt), config.RefundRate);
             view.Bind(field, Board, Enemies, ranges, Life, config.MaxDeployed);
 
             if (placeDemoUnitsOnStart) PlaceDemoUnits();

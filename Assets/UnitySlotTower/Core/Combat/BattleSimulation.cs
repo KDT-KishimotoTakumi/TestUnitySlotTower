@@ -34,6 +34,7 @@ namespace UnitySlotTower.Core.Combat
         private readonly PlayerLife life;
         private readonly Wallet wallet;
         private readonly EnemyDropRoller dropRoller;
+        private readonly float refundRate;
 
         /// <summary>HP が 0 になって消えた味方。RemoveUnit が済んだ後に呼ぶ。</summary>
         public event Action<PlacedUnit> UnitDefeated;
@@ -47,8 +48,9 @@ namespace UnitySlotTower.Core.Combat
         /// <param name="bufferMultiplier">バッファーの攻撃力倍率（game_config.csv の buffer_atk_multiplier）。</param>
         /// <param name="life">省略するとゴール到達でライフを減らさない。</param>
         /// <param name="wallet">ドロップの加算先（スロットと共有、T301）。wallet と random は両方渡すか両方省略する（省略するとドロップなし）。</param>
+        /// <param name="refundRate">撤退の返還率（game_config.csv の refund_rate、0〜1）。撤退には wallet も必要。省略すると 0（返還なし）。</param>
         public BattleSimulation(PlacementBoard board, EnemyField enemies, UnitSummoner summoner, UnitRangeTable ranges,
-            float bufferMultiplier, PlayerLife life = null, Wallet wallet = null, GameRandom random = null)
+            float bufferMultiplier, PlayerLife life = null, Wallet wallet = null, GameRandom random = null, float refundRate = 0f)
         {
             this.board = board ?? throw new ArgumentNullException(nameof(board));
             this.enemies = enemies ?? throw new ArgumentNullException(nameof(enemies));
@@ -56,6 +58,8 @@ namespace UnitySlotTower.Core.Combat
             this.ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
             if (bufferMultiplier < 1f) throw new ArgumentOutOfRangeException(nameof(bufferMultiplier));
             this.bufferMultiplier = bufferMultiplier;
+            if (refundRate < 0f || refundRate > 1f) throw new ArgumentOutOfRangeException(nameof(refundRate));
+            this.refundRate = refundRate;
             if ((wallet == null) != (random == null))
                 throw new ArgumentException("wallet と random は両方渡すか、両方省略してください");
             this.life = life;
@@ -87,6 +91,20 @@ namespace UnitySlotTower.Core.Combat
             board.Remove(unit.Cell);
             summoner.ReleaseSlot();
             RecomputeBuffs();
+            return true;
+        }
+
+        /// <summary>
+        /// 味方を撤退させる（FR-025）。消えて、召喚コスト × 返還率（切り捨て）が財布に戻る。ストックから出した個体も同じ式（plan C-3）。
+        /// 盤面にいない味方なら何も変えず false。
+        /// </summary>
+        public bool TryRetreat(PlacedUnit unit, out int refund)
+        {
+            if (wallet == null) throw new InvalidOperationException("撤退には wallet が必要です");
+            refund = 0;
+            if (!RemoveUnit(unit)) return false;
+            refund = (int)Math.Floor(unit.Def.Cost * refundRate);
+            if (refund > 0) wallet.Add(refund);
             return true;
         }
 
