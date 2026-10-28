@@ -4,6 +4,9 @@
     "references": [
         "UnitySlotTower.Core",
         "UnitySlotTower.Runtime",
+        "UnitySlotTower.Editor",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

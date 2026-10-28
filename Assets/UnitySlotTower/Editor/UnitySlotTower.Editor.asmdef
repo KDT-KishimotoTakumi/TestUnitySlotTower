@@ -4,7 +4,8 @@
     "references": [
         "UnitySlotTower.Core",
         "UnitySlotTower.Runtime",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
