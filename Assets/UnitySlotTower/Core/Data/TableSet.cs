@@ -54,5 +54,8 @@ namespace UnitySlotTower.Core.Data
             SlotProbabilityTable.FromTable(Get(SlotProbabilitiesFile), SlotPayouts);
 
         public SlotRules SlotRules => SlotRules.FromTable(Get(SlotRulesFile));
+
+        public SlotPremonitionTable SlotPremonition =>
+            SlotPremonitionTable.FromTable(Get(SlotPremonitionFile), SlotPayouts);
     }
 }

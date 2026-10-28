@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T107 完了（T106 までコミット済み `60b213b`、T107 は未コミット）。次は T108
+更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T108 完了（T107 までコミット済み `fdff1b0`、T108 は未コミット）。次は T109
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -17,7 +17,8 @@
 - T105（持ち越しとボーナス開始）: `SlotMachine.CarriedBonus`（抽選で当たったボーナスを揃うまで保持。持ち越し中の抽選は小役だけ採用して「小役＋持ち越し」を `Flag` にする）、揃ったら `State=Bonus`・`ActiveBonus` に BIG/REG・`CarriedBonus=null`、`SlotGameResult.BonusStarted`。ボーナス図柄そのものの払い出しは 0。plan 5章の「持ち越し中は小役より優先」は採らず、小役の引き込みは必須のまま、ボーナスは狙える手を優先するだけにした（T103 の制御の性質。小役の払い出しを確実にするため）。
 - T106（ボーナス中）: `State==Bonus` の間は `slot_probabilities.csv` の bonus 状態の表で抽選（BIG/REG は重ならない）。`BonusPayout`（ボーナス中の払い出しの合計。始まったゲームの分と掛け金は含めない）が `bonus_big_max_payout`/`bonus_reg_max_payout` 以上になった最初のゲームで終了し、`SlotGameResult.BonusEnded` に役が入り State=Normal、`ActiveBonus=null`。`BonusGames` は消化ゲーム数。
 - T107（確変）: 通常時の BIG 終了後に `kakuhen_entry_rate`（仮値 1）の抽選で State=Kakuhen・`KakuhenRemaining=kakuhen_games`（仮値 100）。確変中は kakuhen の確率表を使い、1ゲームごと（ボーナスが始まったゲームも）に残りが減って 0 で通常へ。確変中に BIG が揃うと抽選なしでゲーム数をリセットして続く。REG は確変に入らず、確変中の REG はボーナス中に残りが減らず、終了後に残りゲーム数で確変に戻る。確変が先に切れてから揃った持ち越しボーナスは通常時扱い。
-- 次の一手: T108（先バレ。`slot_premonition.csv` に成立フラグごとの発生率、ハズレのガセ率は初期値 0。レバーオン時に抽選して `SlotMachine` から参照できるようにする。音・光の表示は T110）。AC-042。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T108（先バレ）: `slot_premonition.csv`（role,rate。役名か NONE＝ガセ、重複当選は最大の率）。`SlotMachine.Premonition` がレバーオン時の抽選結果（次のレバーまで保持）。ボーナス持ち越し中は新しく当たった小役だけで判定。先バレの抽選は乱数を1回使うので、それ以前の乱数列とは変わっている（テストは範囲で見ているので影響なし）。率は仮値。
+- 次の一手: T109（理論機械割ツールと大量シミュレーション）。設定1〜6の目標は 100/104/108/112/118/125%。確率と配当は仮値なので `slot_probabilities.csv` を調整する。ボーナス中の払い出しの合計に上限があり（BIG 240/REG 96）、確変もあるので、通常/確変/ボーナスの状態遷移を含めた計算が必要（状態の定常分布で理論値を出し、大量シミュレーションと比べる）。AC-040/043。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）

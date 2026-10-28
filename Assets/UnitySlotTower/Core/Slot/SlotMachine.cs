@@ -73,6 +73,7 @@ namespace UnitySlotTower.Core.Slot
 
         private readonly SlotProbabilityTable probabilities;
         private readonly SlotPayoutTable payouts;
+        private readonly SlotPremonitionTable premonitions;
         private readonly SlotReelController controller;
         private readonly SlotReels reels;
         private readonly Wallet wallet;
@@ -100,6 +101,7 @@ namespace UnitySlotTower.Core.Slot
                 throw new ArgumentOutOfRangeException(nameof(setting));
             probabilities = tables.SlotProbabilities;
             payouts = tables.SlotPayouts;
+            premonitions = tables.SlotPremonition;
             reels = tables.SlotReels;
             var rules = tables.SlotRules;
             controller = new SlotReelController(reels, payouts, rules.MaxSlip);
@@ -125,6 +127,9 @@ namespace UnitySlotTower.Core.Slot
 
         /// <summary>このゲームでリール制御に使う成立役の組（今回の小役 ＋ 持ち越し中のボーナス）。</summary>
         public SlotFlag Flag { get; private set; } = SlotFlag.None;
+
+        /// <summary>このゲームのレバーオン時に先バレ（ランプ・音の予告）が出たか。次のレバーまで保持する。</summary>
+        public bool Premonition { get; private set; }
 
         /// <summary>揃うまで持ち越しているボーナスフラグ（BIG/REG）。なければ null。</summary>
         public SlotPayout CarriedBonus => carriedBonus;
@@ -205,12 +210,15 @@ namespace UnitySlotTower.Core.Slot
         private SlotFlag DrawFlag()
         {
             var drawn = probabilities.Draw(Setting, State, random);
-            if (State == SlotState.Bonus) return drawn;
-            if (carriedBonus == null)
+            if (State == SlotState.Bonus || carriedBonus == null)
             {
+                Premonition = premonitions.Draw(drawn, random);
+                if (State == SlotState.Bonus) return drawn;
                 carriedBonus = drawn.Bonus;
                 return drawn;
             }
+            // 先バレは今回新しく当たった役だけで決める（持ち越し中のボーナスで毎ゲーム出ないように）
+            Premonition = premonitions.Draw(drawn.Small, random);
             return Combine(drawn.Small, carriedBonus);
         }
 
