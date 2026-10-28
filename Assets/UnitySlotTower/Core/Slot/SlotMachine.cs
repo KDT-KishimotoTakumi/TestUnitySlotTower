@@ -42,8 +42,11 @@ namespace UnitySlotTower.Core.Slot
         /// <summary>このゲームの後も持ち越しているボーナスフラグ。なければ null。</summary>
         public SlotPayout CarriedBonus { get; }
 
+        /// <summary>このゲームでボーナスが上限枚数に達して終わった場合の役（BIG/REG）。なければ null。</summary>
+        public SlotPayout BonusEnded { get; }
+
         public SlotGameResult(SlotFlag flag, int[] stops, ulong realizedMask, int betPaid, int payout, bool replay,
-            SlotPayout bonusStarted, SlotPayout carriedBonus)
+            SlotPayout bonusStarted, SlotPayout carriedBonus, SlotPayout bonusEnded)
         {
             Flag = flag;
             Stops = stops;
@@ -53,6 +56,7 @@ namespace UnitySlotTower.Core.Slot
             Replay = replay;
             BonusStarted = bonusStarted;
             CarriedBonus = carriedBonus;
+            BonusEnded = bonusEnded;
         }
     }
 
@@ -65,6 +69,8 @@ namespace UnitySlotTower.Core.Slot
         /// <summary>リールの回転速度（約 80 回転/分）。</summary>
         public const double SpinSymbolsPerSecond = 28.0;
 
+        private const string BigRole = "BIG";
+
         private readonly SlotProbabilityTable probabilities;
         private readonly SlotPayoutTable payouts;
         private readonly SlotReelController controller;
@@ -73,6 +79,8 @@ namespace UnitySlotTower.Core.Slot
         private readonly GameRandom random;
         private readonly int bet;
         private readonly float waitSeconds;
+        private readonly int bigMaxPayout;
+        private readonly int regMaxPayout;
         private readonly int[] stops = { SlotReelController.Unstopped, SlotReelController.Unstopped, SlotReelController.Unstopped };
         private readonly double[] phases = new double[SlotLayout.ReelCount];
 
@@ -94,6 +102,8 @@ namespace UnitySlotTower.Core.Slot
             controller = new SlotReelController(reels, payouts, rules.MaxSlip);
             bet = tables.GameConfig.Bet;
             waitSeconds = rules.WaitSeconds;
+            bigMaxPayout = rules.BonusBigMaxPayout;
+            regMaxPayout = rules.BonusRegMaxPayout;
             this.wallet = wallet;
             this.random = random;
             Setting = setting;
@@ -116,6 +126,12 @@ namespace UnitySlotTower.Core.Slot
 
         /// <summary>いま行われているボーナス（BIG/REG）。ボーナス中でなければ null。</summary>
         public SlotPayout ActiveBonus { get; private set; }
+
+        /// <summary>いまのボーナスでこれまでに払い出した枚数（始まったゲームの分は含まない）。</summary>
+        public int BonusPayout { get; private set; }
+
+        /// <summary>いまのボーナスで消化したゲーム数（始まったゲームは含まない）。</summary>
+        public int BonusGames { get; private set; }
 
         public SlotGameResult LastResult { get; private set; }
 
@@ -218,13 +234,27 @@ namespace UnitySlotTower.Core.Slot
 
             wallet.Add(payout);
             ReplayPending = replay;
-            if (bonusStarted != null)
+            SlotPayout bonusEnded = null;
+            if (State == SlotState.Bonus)
+            {
+                BonusGames++;
+                BonusPayout += payout;
+                if (BonusPayout >= (ActiveBonus.Role == BigRole ? bigMaxPayout : regMaxPayout))
+                {
+                    bonusEnded = ActiveBonus;
+                    ActiveBonus = null;
+                    State = SlotState.Normal;
+                }
+            }
+            else if (bonusStarted != null)
             {
                 ActiveBonus = bonusStarted;
                 State = SlotState.Bonus;
                 carriedBonus = null;
+                BonusPayout = 0;
+                BonusGames = 0;
             }
-            LastResult = new SlotGameResult(Flag, (int[])stops.Clone(), mask, betPaid, payout, replay, bonusStarted, carriedBonus);
+            LastResult = new SlotGameResult(Flag, (int[])stops.Clone(), mask, betPaid, payout, replay, bonusStarted, carriedBonus, bonusEnded);
             Phase = SlotPhase.Idle;
         }
     }

@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T105 完了（T104 までコミット済み `40210ca`、T105 は未コミット）。次は T106
+更新: 2026-10-28 Asia/Tokyo / 状態: M0 完了、M1 の T101〜T106 完了（T105 までコミット済み `5087082`、T106 は未コミット）。次は T107
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -15,7 +15,8 @@
 - T103 の設計判断: 小役との重複当選（WATERMELON+BIG など）は、同じ窓に両方の図柄が入らない限りボーナスが同時には揃わない＝ボーナスは持ち越しになる（T105 で扱う）。
 - T104（1ゲームの進行）: `Core/Economy/Wallet`（スロットと戦闘で共有する財布。T301 で統合）と `Core/Slot/SlotMachine`。`PullLever()`（`LeverResult`: Started/NotEnoughCoins/Waiting/Busy。掛け金は `game_config.csv` の `bet` を自動投入、リプレイ後は 0）、`Tick(dt)`（固定ステップから呼ぶ。回転 28 コマ/秒、ウェイト `wait_seconds`）、`PressStop(reel)`（押した瞬間の `ReelPosition` を `SlotReelController.Decide` に渡す）。全停止で払い出しを財布に加算し `LastResult`（`SlotGameResult`: Flag/Stops/RealizedMask/BetPaid/Payout/Replay）を更新。`State` は Normal 固定で、確変・ボーナス中への遷移は T105〜T107。注意: `TableSet.SlotPayouts` などのプロパティは呼ぶたびに表を作り直す（参照比較に使わない、ループ内で呼ばない）。
 - T105（持ち越しとボーナス開始）: `SlotMachine.CarriedBonus`（抽選で当たったボーナスを揃うまで保持。持ち越し中の抽選は小役だけ採用して「小役＋持ち越し」を `Flag` にする）、揃ったら `State=Bonus`・`ActiveBonus` に BIG/REG・`CarriedBonus=null`、`SlotGameResult.BonusStarted`。ボーナス図柄そのものの払い出しは 0。plan 5章の「持ち越し中は小役より優先」は採らず、小役の引き込みは必須のまま、ボーナスは狙える手を優先するだけにした（T103 の制御の性質。小役の払い出しを確実にするため）。
-- 次の一手: T106（ボーナス中の抽選と、上限枚数に達するまでの払い出し・終了）。`State==Bonus` の間は `slot_probabilities.csv` の bonus 状態の表で抽選済み（BIG/REG は出ない）。終了条件は `slot_rules.csv` の `bonus_big_max_payout`/`bonus_reg_max_payout`（ボーナス中の払い出しの合計）。終了時に `State` を Normal に戻し `ActiveBonus` を null にする（BIG 後の確変突入は T107）。AC-040。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
+- T106（ボーナス中）: `State==Bonus` の間は `slot_probabilities.csv` の bonus 状態の表で抽選（BIG/REG は重ならない）。`BonusPayout`（ボーナス中の払い出しの合計。始まったゲームの分と掛け金は含めない）が `bonus_big_max_payout`/`bonus_reg_max_payout` 以上になった最初のゲームで終了し、`SlotGameResult.BonusEnded` に役が入り State=Normal、`ActiveBonus=null`。`BonusGames` は消化ゲーム数。
+- 次の一手: T107（BIG 後の確変）。終了処理は `SlotMachine.Finish()` の `bonusEnded` 分岐に足す。BIG 終了時に `kakuhen_entry_rate`（`slot_rules.csv`、仮値 1）で確変に入り、`kakuhen_games`（仮値 100）ゲームのあいだ State=Kakuhen（確率表の kakuhen 状態を使う）。確変中に BIG が揃ったらゲーム数をリセット。REG 後は通常へ。AC-040。戦闘フィールドは仮の平面（`FieldPlaceholder`）で、T201 で置き換える。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
