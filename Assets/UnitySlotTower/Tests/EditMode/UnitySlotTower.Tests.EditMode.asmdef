@@ -7,6 +7,7 @@
         "UnitySlotTower.Editor",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
+        "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -13,7 +13,7 @@
 - [x] T005 (FR-050) 全CSV検証テスト（型・範囲・ID参照・確率合計・経路の連続性）の枠を作る — 検証: わざと壊したCSVで失敗し、正しいCSVで成功する — 2026-10-28 `TableValidator`（必須列と game_config の範囲）の枠まで。ID参照・確率合計・経路連続性の検査は各データを作るタスクで追加 / EditMode 合計17件成功
 - [x] T006 (FR-001) `Game` シーンに縦長 9:16 のレイアウト（上38%戦闘カメラ、操作バー、下部スロット領域）と、ウィンドウ 720×1280・縦横比固定の設定を作る — 検証: Editor 画像、1080p/1440p 相当の解像度で黒帯表示を確認 — 2026-10-28 `Tools/UnitySlotTower/Build Game Scene` で Game.unity・PresentationCatalog.asset を生成。Play 中の画像（Artifacts/Automation/Editor/t006-play.png、Game ビュー 906×408）で 9:16 枠・黒帯・3区画を確認。**未確認**: 720×1280 ウィンドウと実際の 1080p/1440p 解像度での撮影（プレイヤービルドは T505）。EditMode 17件成功
 - [x] T007 (FR-003) 数字・記号だけの TextMeshPro フォントアセットを作り、Title 以外のシーン・プレハブの文字を走査するテストを作る — 検証: 文字を入れると失敗するテスト — 2026-10-28 `DigitsSDF.asset`（17文字: `0-9 + - − × / %` と空白、静的アトラス、TMP 既定フォントに設定）と `TextRuleScanner`。TextRuleTests 6件成功（文字・別フォント・旧 Text を検出）、EditMode 合計23件成功。TMP Essentials を `Assets/TextMesh Pro/` に取り込み（ハーネスの空白チェックから除外）
-- [ ] T008 (FR-002) InputActionAsset に plan 3章の操作をマウス・キーボード両方で定義する — 検証: アクション一覧とバインドの確認
+- [x] T008 (FR-002) InputActionAsset に plan 3章の操作をマウス・キーボード両方で定義する — 検証: アクション一覧とバインドの確認 — 2026-10-28 `InputSystem_Actions.inputactions` に `Game` マップ（22アクション・39バインド）を追加。InputBindingTests 5件成功（一覧・パス・マウス/キーボード・Shift+数字・実コントロールへの解決）、EditMode 合計28件成功。アイコン・レバー・ストップボタンのマウス操作は uGUI クリック（UI マップ）で行う
 
 ## M1 スロット単体
 
