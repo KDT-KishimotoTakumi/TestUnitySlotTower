@@ -306,10 +306,10 @@ namespace UnitySlotTower.Tests
             field.Spawn(MakeDef(EnemyKind.Melee, 20, 0, 1f, CustomSpeed, 0f), map.FindPath("g1"));
             var maxHp = ally.Def.MaxHp;
 
-            Run(field, 2.3f);   // (3,1) の手前（隣のマスを含む）
+            Run(field, 2.9f);   // (3,1) の手前（半マス以内に近づいても、ブロックされるまでは殴らない）
             Assert.AreEqual(maxHp, ally.Hp);
 
-            Run(field, 0.4f);   // 2.7 秒: 同じマスに入った
+            Run(field, 0.2f);   // 3.1 秒: 3.0 秒に味方のマスに着いてブロックされ、殴り始めた
             Assert.AreEqual(maxHp - 14f, ally.Hp, 1e-4f);   // 20 − 防御 6
         }
 
@@ -320,7 +320,7 @@ namespace UnitySlotTower.Tests
             var map = tables.Maps[0];
             var board = new PlacementBoard(map);
             var ally = Place(board, tables, Swordsman, GroundCell);
-            var enemy = new EnemyInstance(MakeDef(EnemyKind.Melee, 20, 0, 1f, CustomSpeed, 0f), map.FindPath("g1"));
+            var enemy = new EnemyInstance(MakeDef(EnemyKind.Ranged, 20, 0, 1f, CustomSpeed, 0f), map.FindPath("g1"));   // 攻撃間隔の検査なので、ブロックを要らない遠距離（射程0）で行う
             enemy.Move(1f);   // (1,1)
 
             Assert.IsTrue(enemy.TryAttack(SimClock.StepSeconds, board));
@@ -341,7 +341,7 @@ namespace UnitySlotTower.Tests
             var map = tables.Maps[0];
             var board = new PlacementBoard(map);
             var ally = Place(board, tables, Swordsman, GroundCell);
-            var enemy = new EnemyInstance(MakeDef(EnemyKind.Melee, 20, 0, 1f, CustomSpeed, 0f), map.FindPath("g1"));
+            var enemy = new EnemyInstance(MakeDef(EnemyKind.Ranged, 20, 0, 1f, CustomSpeed, 0f), map.FindPath("g1"));   // 同上
 
             for (var i = 0; i < 300; i++) Assert.IsFalse(enemy.TryAttack(SimClock.StepSeconds, board));   // 5 秒間、範囲外
             enemy.Move(1f);

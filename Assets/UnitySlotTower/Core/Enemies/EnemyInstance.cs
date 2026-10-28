@@ -19,6 +19,9 @@ namespace UnitySlotTower.Core.Enemies
         public float Hp { get; }
         /// <summary>次に攻撃できるまでの残り時間（秒）。攻撃できる状態では 0 以下。</summary>
         public float AttackTimer { get; private set; }
+        /// <summary>この敵をブロックしている味方。ブロックされていなければ null（FR-027）。</summary>
+        public PlacedUnit BlockedBy { get; private set; }
+        public bool IsBlocked => BlockedBy != null;
 
         public EnemyInstance(EnemyDef def, MapPath path)
         {
@@ -58,10 +61,13 @@ namespace UnitySlotTower.Core.Enemies
             }
         }
 
-        /// <summary>deltaSeconds だけ経路を進める。ゴールに着いたら ReachedGoal が true になり、そこで止まる。</summary>
+        /// <summary>deltaSeconds だけ進んだ後の経路上の位置（ゴールで止めない。ブロックの判定用）。</summary>
+        public double ProgressAfter(float deltaSeconds) => Progress + (double)Def.MoveSpeed * deltaSeconds;
+
+        /// <summary>deltaSeconds だけ経路を進める。ゴールに着いたら ReachedGoal が true になり、そこで止まる。ブロックされている間は進まない。</summary>
         public void Move(float deltaSeconds)
         {
-            if (ReachedGoal) return;
+            if (ReachedGoal || IsBlocked) return;
             var last = Path.Cells.Count - 1;
             Progress += (double)Def.MoveSpeed * deltaSeconds;
             if (Progress >= last)
@@ -91,9 +97,31 @@ namespace UnitySlotTower.Core.Enemies
             return true;
         }
 
-        /// <summary>射程内でいちばん近い（同距離なら先に見つかった）、HP が残っている味方。いなければ null。</summary>
+        /// <summary>経路のマス cellIndex の中心で止まり、blocker にブロックされる。ブロック数の消費は呼び出し側（EnemyField）が済ませておく。</summary>
+        internal void BlockAt(int cellIndex, PlacedUnit blocker)
+        {
+            Progress = cellIndex;
+            BlockedBy = blocker;
+        }
+
+        /// <summary>ブロックを解いて再び動けるようにする（使っていたブロック数を戻す）。ブロックされていなければ false。</summary>
+        internal bool ClearBlock()
+        {
+            if (BlockedBy == null) return false;
+            BlockedBy.ReleaseBlock(Def.BlockCost);
+            BlockedBy = null;
+            return true;
+        }
+
+        /// <summary>
+        /// 射程内でいちばん近い（同距離なら先に見つかった）、HP が残っている味方。いなければ null。
+        /// 近距離は、ブロックされたときだけ、ブロックした味方を攻撃する（plan 4章）。素通りの間は誰も攻撃しない。
+        /// 中ボス・最終ボスは遠距離と同じ扱いにしている（固有の行動は M3 (T306) で決める）。
+        /// </summary>
         public PlacedUnit FindTarget(PlacementBoard board)
         {
+            if (Def.Kind == EnemyKind.Melee) return BlockedBy != null && BlockedBy.Hp > 0f ? BlockedBy : null;
+
             var origin = CurrentCell;
             var reach = (int)Math.Ceiling(Def.Range);
             var rangeSquared = (double)Def.Range * Def.Range;

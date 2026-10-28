@@ -28,7 +28,8 @@
 - `Art/Materials/Field*.mat` に未コミット差分が出る（シーンビルダーが `_Color` を `_BaseColor` に合わせる副作用、無害）。
 - T203（配置と向き）: `Core/Map/Facing`（Right 基準、時計回り）、`PlacementBoard`（`Check/TryPlace/Remove/GetAt`）、`UnitRangeTable.GetCells(PlacedUnit, MapData, results)`、`UnitSummoner.TrySummon(id, board, cell, facing, out unit)`。`unit_ranges.csv` は `unit_id,dx,dy`（Right 向き、(0,0)=自マス、全職必須）。撤退・消滅では `PlacementBoard.Remove(cell)` と `UnitSummoner.ReleaseSlot()` の両方が要る（T205/T302 で窓口を1か所に）。`TableSet.UnitRanges` などの表は呼ぶたび作り直すので戦闘開始時に1度だけ取って保持する。コマンドは `editor poll-test <id>`。
 - T204（敵）: `Core/Enemies/EnemyField(board, schedule, ...)`。`Tick(dt)` が出現→移動→攻撃の順に進め、ゴール到達で `ReachedGoal` を通知（ライフは T207）。`EnemyInstance`（Progress=経路上の距離、`CurrentCell`、`TryAttack`）、`WaveSchedule.Advance`、`DamageFormula`（敵・味方共通）。`PlacedUnit.Hp`（float）と `TakeDamage`。`enemies.csv` の `move_speed` はマス/秒、`range` はマス単位、wave N のマップは "w"+N。**w1 の waves.csv は暫定**（遠距離・空中を検査用に混在、M3 で近距離中心に再調整）。
-- 次の一手: T205（ブロック: ブロック数・`block_cost`・空中は不可・ブロック中の敵の停止と攻撃。敵の移動停止は `EnemyInstance`/`EnemyField` に入る）→ T206 以降の M2。
+- T205（ブロック）: `EnemyField.TryBlock` が Tick 内でマス中心にブロック停止（dt 非依存）。窓口は `EnemyField.ReleaseBlocksOf(PlacedUnit)`（味方が消えるとき）と `Remove(EnemyInstance)`（敵が倒れたとき）。**近距離はブロックされたときだけブロッカーを攻撃**（T204 の「自マスを射程0で攻撃」は置き換わった）。遠距離・ボスは停止後も射程内の最も近い味方を攻撃。`EnemyField.Tick` の走査は出現順。味方が消えるときは `ReleaseBlocksOf`・`PlacementBoard.Remove`・`UnitSummoner.ReleaseSlot` の3つを必ず呼ぶ（T206 で実装、T302 で窓口を1か所に）。`air_grunt` の `block_cost` は 1 だが `is_air` で素通りする。
+- 次の一手: T206（味方の攻撃: 対象選択、ダメージ式、弓だけ空中可、ヒーラー、バッファー、HP0での消滅。消滅時は上の3つを呼ぶ。healer/buffer の `atk` の意味、自マスを範囲に含めるか、`PlacedUnit.Hp` の小数の扱いを spec/plan で確認し、曖昧なら要確認として報告）→ T207 以降の M2。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）
