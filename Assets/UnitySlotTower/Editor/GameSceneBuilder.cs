@@ -248,6 +248,10 @@ namespace UnitySlotTower.EditorTools
             var gaugeTrack = CreateImage("WaitGaugeTrack", root, new Vector2(LeverLeft, GaugeBottom), new Vector2(LeverRight, GaugeTop), PanelColor);
             var gauge = CreateImage("WaitGauge", gaugeTrack.transform, Vector2.zero, Vector2.one, SlotCabinetView.LampOn).rectTransform;
 
+            // 先バレ時に筐体全体を光らせる膜（最前面に置き、クリックは通す）
+            var premonitionGlow = CreateImage("PremonitionGlow", root, Vector2.zero, Vector2.one, SlotCabinetView.PremonitionGlowOff);
+            premonitionGlow.raycastTarget = false;
+
             var serialized = new SerializedObject(view);
             serialized.FindProperty("catalog").objectReferenceValue = catalog;
             serialized.FindProperty("inputActions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
@@ -257,6 +261,7 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("creditText").objectReferenceValue = creditText;
             serialized.FindProperty("payoutText").objectReferenceValue = payoutText;
             serialized.FindProperty("premonitionLamp").objectReferenceValue = premonitionLamp;
+            serialized.FindProperty("premonitionGlow").objectReferenceValue = premonitionGlow;
             serialized.FindProperty("replayLamp").objectReferenceValue = replayLamp;
             serialized.FindProperty("coinIcon").objectReferenceValue = coinIcon;
             serialized.FindProperty("waitGauge").objectReferenceValue = gauge;

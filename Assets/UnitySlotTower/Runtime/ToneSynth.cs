@@ -8,6 +8,7 @@ namespace UnitySlotTower.Runtime
     {
         private const int SampleRate = 44100;
         private const float Amplitude = 0.35f;
+        private const float OvertoneGain = 0.35f;
 
         /// <summary>
         /// 周波数が途中で firstHz から secondHz に切り替わる、減衰する音。
@@ -28,6 +29,37 @@ namespace UnitySlotTower.Runtime
                 var time = (float)i / SampleRate;
                 samples[i] = (float)wave * Amplitude * Mathf.Exp(-decay * time);
             }
+            var clip = AudioClip.Create(name, count, 1, SampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// hzs を noteInterval 秒ごとに重ねていく上昇アルペジオ（各音は倍音つきで余韻が残る）。
+        /// 重ねた波形は最大振幅が Amplitude になるよう正規化する。
+        /// </summary>
+        public static AudioClip CreateArpeggio(string name, float seconds, float[] hzs, float noteInterval, float decay)
+        {
+            var count = Mathf.Max(1, (int)(seconds * SampleRate));
+            var samples = new float[count];
+            var peak = 0f;
+            for (var i = 0; i < count; i++)
+            {
+                var time = (float)i / SampleRate;
+                var sum = 0.0;
+                for (var note = 0; note < hzs.Length; note++)
+                {
+                    var local = time - note * noteInterval;
+                    if (local < 0f) continue;
+                    var angle = 2.0 * Math.PI * hzs[note] * local;
+                    var wave = Math.Sin(angle) + OvertoneGain * Math.Sin(angle * 2.0);
+                    sum += wave * Math.Exp(-decay * local);
+                }
+                samples[i] = (float)sum;
+                peak = Mathf.Max(peak, Mathf.Abs(samples[i]));
+            }
+            var scale = peak > 0f ? Amplitude / peak : 0f;
+            for (var i = 0; i < count; i++) samples[i] *= scale;
             var clip = AudioClip.Create(name, count, 1, SampleRate, false);
             clip.SetData(samples, 0);
             return clip;

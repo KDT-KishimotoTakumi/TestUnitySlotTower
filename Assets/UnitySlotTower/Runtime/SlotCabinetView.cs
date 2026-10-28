@@ -23,6 +23,7 @@ namespace UnitySlotTower.Runtime
         public static readonly Color LampOn = new Color(1f, 0.85f, 0.2f);
         public static readonly Color ReplayLampOff = new Color(0.1f, 0.15f, 0.3f);
         public static readonly Color ReplayLampOn = new Color(0.3f, 0.6f, 1f);
+        public static readonly Color PremonitionGlowOff = new Color(1f, 0.85f, 0.2f, 0f);
         public static readonly Color CoinNormal = new Color(0.95f, 0.78f, 0.2f);
         public static readonly Color CoinAlert = new Color(0.9f, 0.1f, 0.1f);
 
@@ -31,14 +32,19 @@ namespace UnitySlotTower.Runtime
 
         private const float CoinBlinkSeconds = 1.2f;
         private const float CoinBlinkHalfPeriod = 0.15f;
-        private const float LampPulseSpeed = 6f;
-        private const float LampPulseMinBrightness = 0.6f;
+        private const float PremonitionBlinkHz = 8f;
+        private const float PremonitionColorHz = 3f;
+        private const float PremonitionGlowAlpha = 0.3f;
+        private static readonly Color[] PremonitionColors =
+        {
+            new Color(1f, 0.85f, 0.2f), new Color(1f, 0.25f, 0.6f), new Color(0.3f, 0.9f, 1f)
+        };
         private const double MaxSlideSymbols = SlotLayout.MaxSlipLimit + 1;
 
-        private const float PremonitionSeconds = 0.6f;
-        private const float PremonitionFirstHz = 880f;
-        private const float PremonitionSecondHz = 1320f;
-        private const float PremonitionDecay = 3f;
+        private const float PremonitionSeconds = 1.6f;
+        private const float PremonitionNoteInterval = 0.12f;
+        private const float PremonitionDecay = 2.5f;
+        private static readonly float[] PremonitionHz = { 784f, 988f, 1175f, 1568f, 1976f, 2349f };
         private const float LeverSeconds = 0.08f;
         private const float LeverHz = 220f;
         private const float StopSeconds = 0.06f;
@@ -56,6 +62,7 @@ namespace UnitySlotTower.Runtime
         [SerializeField] private TMP_Text creditText;
         [SerializeField] private TMP_Text payoutText;
         [SerializeField] private Image premonitionLamp;
+        [SerializeField] private Image premonitionGlow;
         [SerializeField] private Image replayLamp;
         [SerializeField] private Image coinIcon;
         [SerializeField] private RectTransform waitGauge;
@@ -109,7 +116,7 @@ namespace UnitySlotTower.Runtime
             leverClip = ToneSynth.Create("SlotLever", LeverSeconds, LeverHz, LeverHz, ClipDecay);
             stopClip = ToneSynth.Create("SlotStop", StopSeconds, StopHz, StopHz, ClipDecay);
             denyClip = ToneSynth.Create("SlotDeny", DenySeconds, DenyHz, DenyHz, ClipDecay / 2f, true);
-            premonitionClip = ToneSynth.Create("SlotPremonition", PremonitionSeconds, PremonitionFirstHz, PremonitionSecondHz, PremonitionDecay);
+            premonitionClip = ToneSynth.CreateArpeggio("SlotPremonition", PremonitionSeconds, PremonitionHz, PremonitionNoteInterval, PremonitionDecay);
         }
 
         private void OnEnable()
@@ -259,9 +266,17 @@ namespace UnitySlotTower.Runtime
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
                 stopButtons[reel].targetGraphic.color = spinning && !Machine.IsStopped(reel) ? ButtonOn : ButtonOff;
 
-            // 先バレ: 回転中だけランプが脈打つ
-            var pulse = LampPulseMinBrightness + (1f - LampPulseMinBrightness) * (0.5f + 0.5f * Mathf.Sin(Time.time * LampPulseSpeed));
-            premonitionLamp.color = spinning && Machine.Premonition ? Color.Lerp(LampOff, LampOn, pulse) : LampOff;
+            // 先バレ: 回転中だけランプが速く明滅しながら色を切り替え、筐体全体も薄く光る
+            var active = spinning && Machine.Premonition;
+            var time = Time.time;
+            var lit = ((int)(time * PremonitionBlinkHz * 2f) & 1) == 0;
+            var color = PremonitionColors[(int)(time * PremonitionColorHz) % PremonitionColors.Length];
+            premonitionLamp.color = active && lit ? color : LampOff;
+            if (premonitionGlow != null)
+            {
+                color.a = lit ? PremonitionGlowAlpha : 0f;
+                premonitionGlow.color = active ? color : PremonitionGlowOff;
+            }
             replayLamp.color = Machine.ReplayPending ? ReplayLampOn : ReplayLampOff;
         }
     }
