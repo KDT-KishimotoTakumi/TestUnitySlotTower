@@ -153,13 +153,21 @@ namespace UnitySlotTower.Tests
         }
 
         [Test]
-        public void Waves2To5_HaveNoBossEntriesYet()
+        public void EveryWave_HasOneBossAtTheEnd_FinalBossOnlyInWave5()
         {
-            // ボスは T306 で敵定義と一緒に入れる
+            // ボスの中身（ステータス・固有行動・出現順）は BossTests (T306)
             var tables = Tables;
-            for (var wave = SecondWave; wave <= FifthWave; wave++)
+            for (var wave = 1; wave <= FifthWave; wave++)
+            {
+                var bosses = 0;
                 foreach (var entry in EntriesOf(tables, wave))
-                    Assert.IsFalse(entry.IsBoss, $"ウェーブ {wave}");
+                {
+                    if (!entry.IsBoss) continue;
+                    bosses++;
+                    Assert.AreEqual(wave == FifthWave ? EnemyKind.FinalBoss : EnemyKind.MidBoss, entry.Enemy.Kind, $"ウェーブ {wave}");
+                }
+                Assert.AreEqual(1, bosses, $"ウェーブ {wave}");
+            }
         }
 
         [Test]

@@ -11,6 +11,11 @@ namespace UnitySlotTower.Core.Enemies
     /// </summary>
     public sealed class EnemyInstance
     {
+        private static readonly GridPoint[] NeighborOffsets =
+        {
+            new GridPoint(1, 0), new GridPoint(-1, 0), new GridPoint(0, 1), new GridPoint(0, -1),
+        };
+
         public EnemyDef Def { get; }
         public MapPath Path { get; }
         /// <summary>経路上の進み具合（マス数）。0 が出現口、Cells.Count - 1 がゴール。</summary>
@@ -99,9 +104,33 @@ namespace UnitySlotTower.Core.Enemies
                 return false;
             }
             target.TakeDamage(DamageFormula.Calculate(Def.Atk, target.Defense));
+            if (Def.Ability == EnemyAbility.AreaAttack) DamageNeighbors(target, board);
             AttackTimer += Def.AttackInterval;
             return true;
         }
+
+        // 範囲攻撃: 攻撃した味方の上下左右のマスの味方に、攻撃力 × AreaRatio でダメージ
+        private void DamageNeighbors(PlacedUnit target, PlacementBoard board)
+        {
+            var splashAtk = Def.Atk * Def.AreaRatio;
+            for (var i = 0; i < NeighborOffsets.Length; i++)
+            {
+                var offset = NeighborOffsets[i];
+                var unit = board.GetAt(new GridPoint(target.Cell.X + offset.X, target.Cell.Y + offset.Y));
+                if (unit == null || unit.Hp <= 0f) continue;
+                unit.TakeDamage(DamageFormula.Calculate(splashAtk, unit.Defense));
+            }
+        }
+
+        /// <summary>経路上の位置を progress にする（呼び出された雑魚を呼び出し元の位置に出す。ゴールのマスは超えない）。</summary>
+        internal void PlaceAt(double progress)
+        {
+            var last = Path.Cells.Count - 1;
+            Progress = progress < last ? progress : last;
+        }
+
+        /// <summary>固有行動の経過時間（秒）。呼び出し（SummonMinions）が EnemyField から使う。</summary>
+        internal float AbilityTimer { get; set; }
 
         /// <summary>経路のマス cellIndex の中心で止まり、blocker にブロックされる。ブロック数の消費は呼び出し側（EnemyField）が済ませておく。</summary>
         internal void BlockAt(int cellIndex, PlacedUnit blocker)
@@ -122,11 +151,11 @@ namespace UnitySlotTower.Core.Enemies
         /// <summary>
         /// 射程内でいちばん近い（同距離なら先に見つかった）、HP が残っている味方。いなければ null。
         /// 近距離は、ブロックされたときだけ、ブロックした味方を攻撃する（plan 4章）。素通りの間は誰も攻撃しない。
-        /// 中ボス・最終ボスは遠距離と同じ扱いにしている（固有の行動は M3 (T306) で決める）。
+        /// 中ボスは近距離と同じ（ブロックしたときだけ攻撃）、最終ボスは遠距離と同じ（射程内を攻撃）。
         /// </summary>
         public PlacedUnit FindTarget(PlacementBoard board)
         {
-            if (Def.Kind == EnemyKind.Melee) return BlockedBy != null && BlockedBy.Hp > 0f ? BlockedBy : null;
+            if (Def.Kind == EnemyKind.Melee || Def.Kind == EnemyKind.MidBoss) return BlockedBy != null && BlockedBy.Hp > 0f ? BlockedBy : null;
 
             var origin = CurrentCell;
             var reach = (int)Math.Ceiling(Def.Range);

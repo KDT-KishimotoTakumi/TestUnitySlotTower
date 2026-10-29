@@ -15,6 +15,7 @@ namespace UnitySlotTower.Core.Enemies
         private readonly WaveSchedule schedule;
         private readonly List<EnemyInstance> active = new List<EnemyInstance>();
         private readonly List<WaveEntry> spawnBuffer = new List<WaveEntry>();
+        private readonly List<PendingSummon> summonBuffer = new List<PendingSummon>();
 
         /// <summary>ゴールに着いた敵。Tick の中で、先に出た敵から順に呼ぶ。</summary>
         public event Action<EnemyInstance> ReachedGoal;
@@ -58,6 +59,43 @@ namespace UnitySlotTower.Core.Enemies
                     continue;
                 }
                 enemy.TryAttack(deltaSeconds, board);
+                if (enemy.Def.Ability == EnemyAbility.SummonMinions && enemy.Def.SummonEnemy != null && enemy.Hp > 0f) CollectSummons(enemy, deltaSeconds);
+            }
+
+            // 呼び出された雑魚は、この Tick の処理が終わってから一覧に加える（次の Tick から動く）
+            for (var i = 0; i < summonBuffer.Count; i++)
+            {
+                var summon = summonBuffer[i];
+                var minion = Spawn(summon.Def, summon.Path);
+                minion.PlaceAt(summon.Progress);
+            }
+            summonBuffer.Clear();
+        }
+
+        // 呼び出しの間隔を進め、時間になったら SummonCount 体ぶんを呼び出し元の経路上の位置に予約する。
+        // 呼び出すのは生きているボスだけ（撃破されて一覧から外れた後は止まる）。
+        private void CollectSummons(EnemyInstance boss, float deltaSeconds)
+        {
+            var def = boss.Def;
+            boss.AbilityTimer += deltaSeconds;
+            while (boss.AbilityTimer >= def.SummonInterval)
+            {
+                boss.AbilityTimer -= def.SummonInterval;
+                for (var k = 0; k < def.SummonCount; k++) summonBuffer.Add(new PendingSummon(def.SummonEnemy, boss.Path, boss.Progress));
+            }
+        }
+
+        private readonly struct PendingSummon
+        {
+            public readonly EnemyDef Def;
+            public readonly MapPath Path;
+            public readonly double Progress;
+
+            public PendingSummon(EnemyDef def, MapPath path, double progress)
+            {
+                Def = def;
+                Path = path;
+                Progress = progress;
             }
         }
 

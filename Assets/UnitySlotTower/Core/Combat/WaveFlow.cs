@@ -7,7 +7,10 @@ using UnitySlotTower.Core.Units;
 
 namespace UnitySlotTower.Core.Combat
 {
-    /// <summary>ウェーブの進行状態。最終ウェーブを終えると Cleared ではなく Victory になる（ボス撃破での判定は T306 が接続する）。</summary>
+    /// <summary>
+    /// ウェーブの進行状態。最終ウェーブを終えると Cleared ではなく Victory になる。
+    /// 最終ウェーブの終了条件は他と同じ（出現を消化 + 場の敵ゼロ）で、最終ボスは最後に出るので、撃破と呼び出された雑魚の全滅がクリアの条件になる（T306）。
+    /// </summary>
     public enum WaveState
     {
         /// <summary>準備中。戦闘は進まず、味方の召喚に待ち時間がない。StartWave で Running になる。</summary>

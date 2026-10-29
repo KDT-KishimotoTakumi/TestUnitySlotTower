@@ -12,7 +12,7 @@ namespace UnitySlotTower.Core.Data
             { TableSet.UnitsFile, new[] { "id", "role", "max_hp", "atk", "def", "attack_interval", "block", "placement", "cost", "cooldown", "hits_air" } },
             { TableSet.UnitRangesFile, new[] { "unit_id", "dx", "dy" } },
             { TableSet.UnitUpgradesFile, new[] { "unit_id", "level", "hp_mult", "atk_mult", "def_mult", "cost" } },
-            { TableSet.EnemiesFile, new[] { "id", "kind", "max_hp", "atk", "def", "attack_interval", "move_speed", "range", "is_air", "block_cost", "life_damage", "drop_chance", "drop_min", "drop_max" } },
+            { TableSet.EnemiesFile, new[] { "id", "kind", "max_hp", "atk", "def", "attack_interval", "move_speed", "range", "is_air", "block_cost", "life_damage", "drop_chance", "drop_min", "drop_max", "ability", "ability_param" } },
             { TableSet.MapPathsFile, new[] { "map_id", "path_id", "order", "x", "y", "kind" } },
             { TableSet.WavesFile, new[] { "wave", "time", "enemy_id", "spawn", "path_id", "is_boss" } },
             { TableSet.SlotReelsFile, new[] { "reel", "position", "symbol" } },

@@ -64,7 +64,7 @@ namespace UnitySlotTower.Tests
         // ---- CSV の読み込みと検査 ----
 
         [Test]
-        public void RealTables_HoldThreeEnemyKindsAndWaveOne()
+        public void RealTables_HoldEnemyKindsAndWaveOne()
         {
             var tables = RealTables();
             var enemies = tables.Enemies;
@@ -81,13 +81,13 @@ namespace UnitySlotTower.Tests
             Assert.IsTrue(waves.HasWave(2));   // T305 で W2〜W5 を追加
             Assert.IsFalse(waves.HasWave(6));
             var schedule = waves.CreateSchedule(1);
-            Assert.AreEqual(10, schedule.Count);
+            Assert.AreEqual(11, schedule.Count);   // 雑魚 10 体 + 中ボス 1 体
             var spawned = new List<WaveEntry>();
             schedule.Advance(WaveTable.MaxSpawnTime, spawned);
             Assert.IsTrue(schedule.IsFinished);
             var kinds = new HashSet<EnemyKind>();
             foreach (var entry in spawned) kinds.Add(entry.Enemy.Kind);
-            Assert.AreEqual(3, kinds.Count);
+            Assert.AreEqual(4, kinds.Count);   // 近距離・遠距離・空中・中ボス
         }
 
         [Test]

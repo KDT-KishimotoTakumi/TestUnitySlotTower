@@ -9,6 +9,7 @@ wave,time,enemy_id,spawn,path_id,is_boss
 1,31,ranged_grunt,S1,g1,0
 1,35,air_grunt,S1,a1,0
 1,39,melee_grunt,S1,g1,0
+1,43,mid_boss,S1,g1,1
 2,3,melee_grunt,S1,g1,0
 2,8,melee_grunt,S1,g1,0
 2,13,ranged_grunt,S1,g1,0
@@ -23,6 +24,7 @@ wave,time,enemy_id,spawn,path_id,is_boss
 2,58,ranged_grunt,S1,g1,0
 2,63,melee_grunt,S1,g1,0
 2,68,melee_grunt,S1,g1,0
+2,72,mid_boss,S1,g1,1
 3,3,melee_grunt,S1,g1,0
 3,8,melee_grunt,S1,g1,0
 3,13,ranged_grunt,S1,g1,0
@@ -39,6 +41,7 @@ wave,time,enemy_id,spawn,path_id,is_boss
 3,68,melee_grunt,S1,g1,0
 3,73,ranged_grunt,S1,g1,0
 3,78,air_grunt,S1,a1,0
+3,82,mid_boss,S1,g1,1
 4,3,melee_grunt,S1,g1,0
 4,7,melee_grunt,S2,g2,0
 4,11,ranged_grunt,S1,g1,0
@@ -55,6 +58,7 @@ wave,time,enemy_id,spawn,path_id,is_boss
 4,55,melee_grunt,S2,g2,0
 4,59,air_grunt,S1,a1,0
 4,63,melee_grunt,S2,g2,0
+4,67,mid_boss,S1,g1,1
 5,3,melee_grunt,S1,g1,0
 5,7,melee_grunt,S1,g1,0
 5,11,ranged_grunt,S1,g1,0
@@ -73,3 +77,4 @@ wave,time,enemy_id,spawn,path_id,is_boss
 5,63,air_grunt,S1,a1,0
 5,67,melee_grunt,S1,g1,0
 5,71,ranged_grunt,S1,g1,0
+5,75,final_boss,S1,g1,1

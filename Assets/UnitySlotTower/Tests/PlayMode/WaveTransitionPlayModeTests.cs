@@ -66,8 +66,17 @@ namespace UnitySlotTower.Tests
             yield return LoadGame((r, f) => { runner = r; field = f; });
 
             var seenWave = 1;
+            var finalBossSeen = false;
             for (var i = 0; i < MaxSteps && runner.Flow.State != WaveState.Victory; i++)
             {
+                // 味方がいないので、最終ボスは出たらすぐ倒す（ゴールに着くと全ライフを失うため）。呼び出された雑魚は自分で進んで消える
+                var active = runner.Enemies.Active;
+                for (var k = 0; k < active.Count; k++)
+                {
+                    if (active[k].Def.Kind != EnemyKind.FinalBoss) continue;
+                    finalBossSeen = true;
+                    active[k].TakeDamage(active[k].Hp);
+                }
                 runner.FastForward(StepSeconds);
                 runner.Life.RestoreFull();
                 if (runner.Flow.WaveNumber == seenWave) continue;
@@ -77,6 +86,8 @@ namespace UnitySlotTower.Tests
             }
 
             Assert.AreEqual(WaveState.Victory, runner.Flow.State);
+            Assert.IsTrue(finalBossSeen, "W5 に最終ボスが出る");
+            Assert.AreEqual(0, runner.Enemies.Active.Count, "クリア時に場の敵はいない");
             Assert.AreEqual(WaveFlow.DefaultWaveCount, runner.Flow.WaveNumber);
             Assert.AreEqual(WaveFlow.DefaultWaveCount, seenWave);
         }

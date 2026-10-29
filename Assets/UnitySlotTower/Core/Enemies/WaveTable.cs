@@ -36,6 +36,7 @@ namespace UnitySlotTower.Core.Enemies
         public static WaveTable FromTable(CsvTable table, EnemyTable enemies, IReadOnlyList<MapData> maps)
         {
             var byWave = new Dictionary<int, List<WaveEntry>>();
+            var rowsByWave = new Dictionary<int, List<CsvRow>>();
             foreach (var row in table.Rows)
             {
                 var wave = row.GetInt("wave");
@@ -74,8 +75,50 @@ namespace UnitySlotTower.Core.Enemies
                     byWave[wave] = list;
                 }
                 list.Add(new WaveEntry(wave, time, enemy, spawn, pathId, isBoss));
+                rowsByWave.TryGetValue(wave, out var rows);
+                if (rows == null)
+                {
+                    rows = new List<CsvRow>();
+                    rowsByWave[wave] = rows;
+                }
+                rows.Add(row);
             }
+            ValidateBosses(byWave, rowsByWave);
             return new WaveTable(byWave);
+        }
+
+        // ボスの並び（FR-010）: 各ウェーブにボスが 1 体で、そのウェーブの最後に出る。
+        // 最終ボスは最大のウェーブ番号にだけ置き、最大のウェーブのボスは必ず最終ボス（それ以外のウェーブは中ボス）。
+        private static void ValidateBosses(Dictionary<int, List<WaveEntry>> byWave, Dictionary<int, List<CsvRow>> rowsByWave)
+        {
+            var finalWave = 0;
+            foreach (var wave in byWave.Keys) finalWave = Math.Max(finalWave, wave);
+
+            foreach (var pair in byWave)
+            {
+                var wave = pair.Key;
+                var entries = pair.Value;
+                var rows = rowsByWave[wave];
+                var bossIndex = -1;
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    if (!entries[i].IsBoss) continue;
+                    if (bossIndex >= 0) throw rows[i].Error("is_boss", $"ウェーブ {wave} のボスは 1 体だけにしてください");
+                    bossIndex = i;
+                }
+                if (bossIndex < 0) throw rows[rows.Count - 1].Error("is_boss", $"ウェーブ {wave} にボス（is_boss=1）がありません");
+
+                var boss = entries[bossIndex];
+                for (var i = 0; i < entries.Count; i++)
+                    if (i != bossIndex && entries[i].Time >= boss.Time)
+                        throw rows[bossIndex].Error("time", $"ウェーブ {wave} のボスは最後に出してください（ボスより遅いか同時の出現があります）");
+
+                var expected = wave == finalWave ? EnemyKind.FinalBoss : EnemyKind.MidBoss;
+                if (boss.Enemy.Kind != expected)
+                    throw rows[bossIndex].Error("enemy_id", wave == finalWave
+                        ? $"最終ウェーブ {wave} のボスは final_boss にしてください"
+                        : $"final_boss は最終ウェーブ {finalWave} だけに置けます（ウェーブ {wave} は mid_boss）");
+            }
         }
 
         private static MapData FindMap(IReadOnlyList<MapData> maps, string id)
