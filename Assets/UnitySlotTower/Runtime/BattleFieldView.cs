@@ -3,7 +3,10 @@ using UnitySlotTower.Core.Map;
 
 namespace UnitySlotTower.Runtime
 {
-    /// <summary>戦闘フィールドの仮表示（グレーボックス）。マップ CSV のグリッドと経路を、マス種別ごとの色の直方体で並べる。T201。</summary>
+    /// <summary>
+    /// 戦闘フィールドの仮表示（グレーボックス）。マップ CSV のグリッドと経路を、マス種別ごとの色の直方体で並べる。T201。
+    /// ウェーブごとのマップへは <see cref="ShowMap"/> で作り直す（T305）。マスと経路の実体は専用の子（<see cref="CellsName"/>）にまとめ、味方・敵の表示とは分ける。
+    /// </summary>
     public sealed class BattleFieldView : MonoBehaviour
     {
         private const float CellFootprint = 0.96f;
@@ -18,6 +21,7 @@ namespace UnitySlotTower.Runtime
         private const float PillarHeight = 0.8f;
         private const float CylinderHeightPerScale = 2f;
         private const float Half = 0.5f;
+        private const string CellsName = "Cells";
 
         // 手前（高い面）から順に調べる
         private static readonly float[] PickHeights = { BlockedHeight, HighHeight, GroundHeight };
@@ -33,6 +37,8 @@ namespace UnitySlotTower.Runtime
         [SerializeField] private Material airPathMaterial;
 
         public MapData Map { get; private set; }
+
+        private Transform cellsRoot;
 
         /// <summary>マス座標とフィールドのローカル座標の変換（Map ができた後に使う）。</summary>
         public FieldGeometry Geometry => new FieldGeometry(Map.Width, Map.Height);
@@ -67,12 +73,23 @@ namespace UnitySlotTower.Runtime
         private void Awake()
         {
             foreach (var map in catalog.LoadTables().Maps)
-                if (map.Id == mapId) Map = map;
-            if (Map == null)
-            {
-                Debug.LogError($"マップ '{mapId}' が見つかりません", this);
-                return;
-            }
+                if (map.Id == mapId) ShowMap(map);
+            if (Map == null) Debug.LogError($"マップ '{mapId}' が見つかりません", this);
+        }
+
+        /// <summary>
+        /// 表示するマップを map に替える（前のマスと経路は捨てる）。BattleView と PlacementMarkerView が持つ座標変換は作り直さないので、
+        /// 先に表示したマップと同じ大きさに限る（全マップ 9×6、EditMode テストで確認）。
+        /// </summary>
+        public void ShowMap(MapData map)
+        {
+            if (map == null) throw new System.ArgumentNullException(nameof(map));
+            if (Map != null && (Map.Width != map.Width || Map.Height != map.Height))
+                throw new System.ArgumentException($"マップ '{map.Id}' の大きさが表示中のマップ '{Map.Id}' と違います", nameof(map));
+            if (cellsRoot != null) Destroy(cellsRoot.gameObject);
+            cellsRoot = new GameObject(CellsName).transform;
+            cellsRoot.SetParent(transform, false);
+            Map = map;
             BuildCells();
             BuildPaths();
         }
@@ -148,7 +165,7 @@ namespace UnitySlotTower.Runtime
             part.name = partName;
             Destroy(part.GetComponent<Collider>());
             var partTransform = part.transform;
-            partTransform.SetParent(transform, false);
+            partTransform.SetParent(cellsRoot, false);
             partTransform.localPosition = localPosition;
             partTransform.localScale = scale;
             part.GetComponent<MeshRenderer>().sharedMaterial = material;

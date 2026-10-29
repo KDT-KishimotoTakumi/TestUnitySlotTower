@@ -32,7 +32,10 @@ namespace UnitySlotTower.Core.Data
         };
 
         /// <summary>マップのグリッド（Tables からの相対パス）。ファイル名（拡張子なし）がマップ ID。</summary>
-        public static readonly IReadOnlyList<string> MapFiles = new[] { "maps/w1.csv" };
+        public static readonly IReadOnlyList<string> MapFiles = new[]
+        {
+            "maps/w1.csv", "maps/w2.csv", "maps/w3.csv", "maps/w4.csv", "maps/w5.csv",
+        };
 
         private readonly Dictionary<string, CsvTable> tables = new Dictionary<string, CsvTable>();
 

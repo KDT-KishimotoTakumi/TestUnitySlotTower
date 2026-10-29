@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnitySlotTower.Core.Combat;
 using UnitySlotTower.Core.Data;
@@ -64,6 +65,7 @@ namespace UnitySlotTower.Runtime
         private Action<int, int> waveClearedAction;
         private UnitTable unitTable;
         private TableSet tables;
+        private IReadOnlyList<MapData> maps;
         private GameConfig config;
         private GameRandom dropRandom;
         private bool advancePending;
@@ -99,16 +101,17 @@ namespace UnitySlotTower.Runtime
                 enabled = false;
                 return;
             }
-            var map = field.Map;
-            if (map.Id != WaveTable.MapIdOf(wave))
+            // 表は呼ぶたびに作り直すので、1 度だけ取って保持する
+            tables = catalog.LoadTables();
+            maps = tables.Maps;
+            var map = FindMap(WaveTable.MapIdOf(wave));
+            if (map == null)
             {
-                Debug.LogError($"BattleRunner: ウェーブ {wave} のマップは '{WaveTable.MapIdOf(wave)}' ですが、フィールドは '{map.Id}' です", this);
+                Debug.LogError($"BattleRunner: ウェーブ {wave} のマップ '{WaveTable.MapIdOf(wave)}' がありません", this);
                 enabled = false;
                 return;
             }
-
-            // 表は呼ぶたびに作り直すので、1 度だけ取って保持する
-            tables = catalog.LoadTables();
+            if (field.Map.Id != map.Id) field.ShowMap(map);
             config = tables.GameConfig;
             unitTable = tables.Units;
             dropRandom = new GameRandom((ulong)DateTime.UtcNow.Ticks ^ DropSeedSalt);
@@ -153,7 +156,7 @@ namespace UnitySlotTower.Runtime
 
         /// <summary>
         /// ウェーブ終了後（Cleared）に、次のウェーブを準備中にする。用意できたら true。
-        /// 戦闘フィールドの表示は 1 つのマップに固定なので、次のウェーブのマップが表示中のものと違うときは用意しない（マップの切替は T305）。
+        /// 次のウェーブのマップが表示中のものと違うときは、戦闘フィールドの表示をそのマップに替える（T305）。
         /// </summary>
         public bool PrepareNextWave()
         {
@@ -164,13 +167,22 @@ namespace UnitySlotTower.Runtime
                 Debug.LogWarning($"BattleRunner: ウェーブ {next} の出現内容が waves.csv にありません", this);
                 return false;
             }
-            if (field.Map.Id != WaveTable.MapIdOf(next))
+            var map = FindMap(WaveTable.MapIdOf(next));
+            if (map == null)
             {
-                Debug.LogWarning($"BattleRunner: ウェーブ {next} のマップ '{WaveTable.MapIdOf(next)}' は表示中のマップ '{field.Map.Id}' と違います（マップ切替は T305）", this);
+                Debug.LogWarning($"BattleRunner: ウェーブ {next} のマップ '{WaveTable.MapIdOf(next)}' がありません", this);
                 return false;
             }
-            BuildBattle(next, field.Map);
+            if (field.Map.Id != map.Id) field.ShowMap(map);
+            BuildBattle(next, map);
             return true;
+        }
+
+        private MapData FindMap(string mapId)
+        {
+            for (var i = 0; i < maps.Count; i++)
+                if (maps[i].Id == mapId) return maps[i];
+            return null;
         }
 
         // Step の最中に盤面を作り直さないよう、次の Step の頭で進める

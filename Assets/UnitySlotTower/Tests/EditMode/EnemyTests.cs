@@ -78,7 +78,8 @@ namespace UnitySlotTower.Tests
 
             var waves = tables.Waves;
             Assert.IsTrue(waves.HasWave(1));
-            Assert.IsFalse(waves.HasWave(2));
+            Assert.IsTrue(waves.HasWave(2));   // T305 で W2〜W5 を追加
+            Assert.IsFalse(waves.HasWave(6));
             var schedule = waves.CreateSchedule(1);
             Assert.AreEqual(10, schedule.Count);
             var spawned = new List<WaveEntry>();
@@ -111,7 +112,7 @@ namespace UnitySlotTower.Tests
             AssertError(ValidateFails(WithFile(file, "1,23,air_grunt,S1,a1,0", "1,23,air_grunt,S1,g1,0")), file, 7, "path_id", "地上経路");
             AssertError(ValidateFails(WithFile(file, "1,3,melee_grunt,S1,g1,0", "1,-1,melee_grunt,S1,g1,0")), file, 2, "time", "0〜");
             AssertError(ValidateFails(WithFile(file, "1,3,melee_grunt,S1,g1,0", "1,601,melee_grunt,S1,g1,0")), file, 2, "time", "0〜");
-            AssertError(ValidateFails(WithFile(file, "1,39,melee_grunt,S1,g1,0", "2,39,melee_grunt,S1,g1,0")), file, 11, "wave", "w2");
+            AssertError(ValidateFails(WithFile(file, "1,39,melee_grunt,S1,g1,0", "9,39,melee_grunt,S1,g1,0")), file, 11, "wave", "w9");
             AssertError(ValidateFails(WithFile(file, "1,3,melee_grunt,S1,g1,0", "1,3,melee_grunt,S1,g1,1")), file, 2, "is_boss", "ボス");
         }
 

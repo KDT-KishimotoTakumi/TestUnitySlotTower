@@ -88,10 +88,11 @@ namespace UnitySlotTower.Runtime
             BuildLifePips();
         }
 
-        /// <summary>次のウェーブの盤面と敵に付け替える（T304）。表示は次の LateUpdate で新しい状態に合わせて入れ替わる。マップは同じものに限る。</summary>
+        /// <summary>次のウェーブの盤面と敵に付け替える（T304）。表示は次の LateUpdate で新しい状態に合わせて入れ替わる。マップは field の表示中のもの（T305。大きさは同じ）。</summary>
         public void Rebind(PlacementBoard placementBoard, EnemyField enemies)
         {
             ClearRange();
+            geometry = field.Geometry;
             board = placementBoard;
             enemyField = enemies;
         }
