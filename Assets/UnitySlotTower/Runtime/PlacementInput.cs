@@ -38,6 +38,7 @@ namespace UnitySlotTower.Runtime
 
         private Action<int> iconPressed;
         private PlacementController controller;
+        private PlacementBoard boundBoard;
         private InputAction pointAction;
         private InputAction pressAction;
         private InputAction cancelAction;
@@ -140,10 +141,15 @@ namespace UnitySlotTower.Runtime
 
         private bool EnsureBound()
         {
-            if (controller != null) return true;
             if (runner == null || runner.Simulation == null) return false;
+            if (controller != null && runner.Board == boundBoard) return true;
 
+            // 次のウェーブで盤面が変わったときは、配置操作を捨てて新しい盤面の操作に作り直す（印とアイコンは作り直さない）
+            var rebinding = controller != null;
+            if (rebinding) AbortPlacement();
+            boundBoard = runner.Board;
             controller = new PlacementController(runner.Units, runner.Summoner, runner.Board, runner.Wallet);
+            if (rebinding) return true;
             markers.Bind(field);
             var units = runner.Units.Units;
             for (var i = 0; i < icons.Length; i++)

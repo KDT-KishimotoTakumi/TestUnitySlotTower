@@ -14,13 +14,13 @@ namespace UnitySlotTower.Core.Units
 
     /// <summary>
     /// 種類ごとの強化の段階（FR-026）。強化すると、盤面にいる同種の全個体と、これから置く同種の個体にステータスが反映される。
-    /// board と 1 対 1（購読を解除しない）。ウェーブをまたいで段階を引き継ぐ（T304）には、この状態を作り直さず盤面だけ差し替える。
+    /// 盤面は Rebind で差し替えられる。ウェーブをまたいで段階を引き継ぐ（T304）には、この状態を作り直さず Rebind を呼ぶ。
     /// </summary>
     public sealed class UnitUpgrades
     {
         private readonly UnitUpgradeTable table;
         private readonly Wallet wallet;
-        private readonly PlacementBoard board;
+        private PlacementBoard board;
         private readonly Dictionary<string, int> levels = new Dictionary<string, int>();
 
         /// <summary>段階が上がった。引数は種類の id と新しい段階（盤面への反映が済んだ後に呼ぶ）。</summary>
@@ -31,6 +31,16 @@ namespace UnitySlotTower.Core.Units
             this.table = table ?? throw new ArgumentNullException(nameof(table));
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             this.board = board ?? throw new ArgumentNullException(nameof(board));
+            board.UnitPlaced += Apply;
+        }
+
+        /// <summary>強化の対象を別の盤面に付け替える（段階はそのまま）。古い盤面の購読は解除する。新しい盤面に置かれる個体から反映される。</summary>
+        public void Rebind(PlacementBoard newBoard)
+        {
+            if (newBoard == null) throw new ArgumentNullException(nameof(newBoard));
+            if (ReferenceEquals(newBoard, board)) return;
+            board.UnitPlaced -= Apply;
+            board = newBoard;
             board.UnitPlaced += Apply;
         }
 

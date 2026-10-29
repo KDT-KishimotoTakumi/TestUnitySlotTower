@@ -50,15 +50,38 @@ namespace UnitySlotTower.Core.Units
         {
             var unit = table.Get(unitId);
             placed = null;
+            var rejected = CheckPlacement(unit, board, cell);
+            if (rejected != SummonResult.Success) return rejected;
+            var result = TrySummon(unitId);
+            if (result == SummonResult.Success) board.TryPlace(unit, cell, facing, out placed);
+            return result;
+        }
+
+        /// <summary>
+        /// 種類 unitId を、コインも待ち時間も使わずに配置する（無料ストックからの配置、FR-016）。判定の順は 配置先 → 配置上限。
+        /// 成功すると配置数を1増やして board に置き（HP 全快の新規個体）、待ち時間は始めない。失敗時は何も変わらない。
+        /// </summary>
+        public SummonResult TrySummonFree(string unitId, PlacementBoard board, GridPoint cell, Facing facing, out PlacedUnit placed)
+        {
+            var unit = table.Get(unitId);
+            placed = null;
+            var rejected = CheckPlacement(unit, board, cell);
+            if (rejected != SummonResult.Success) return rejected;
+            if (DeployedCount >= MaxDeployed) return SummonResult.DeployLimit;
+            DeployedCount++;
+            board.TryPlace(unit, cell, facing, out placed);
+            return SummonResult.Success;
+        }
+
+        private static SummonResult CheckPlacement(UnitDef unit, PlacementBoard board, GridPoint cell)
+        {
             switch (board.Check(unit, cell))
             {
                 case PlacementResult.OutOfMap: return SummonResult.OutOfMap;
                 case PlacementResult.WrongCellType: return SummonResult.WrongCellType;
                 case PlacementResult.Occupied: return SummonResult.CellOccupied;
+                default: return SummonResult.Success;
             }
-            var result = TrySummon(unitId);
-            if (result == SummonResult.Success) board.TryPlace(unit, cell, facing, out placed);
-            return result;
         }
 
         /// <summary>種類 unitId の残り待ち時間（秒）。0 なら召喚できる。</summary>

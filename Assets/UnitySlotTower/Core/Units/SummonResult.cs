@@ -11,5 +11,8 @@ namespace UnitySlotTower.Core.Units
         OutOfMap,
         WrongCellType,
         CellOccupied,
+        // 以下は無料ストックからの配置（WaveFlow.TrySummonFromStock）で、ストックを使えないとき
+        NoStock,
+        WaveNotActive,
     }
 }
