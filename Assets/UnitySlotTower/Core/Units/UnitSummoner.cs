@@ -1,18 +1,20 @@
 using System;
 using UnitySlotTower.Core.Economy;
 using UnitySlotTower.Core.Map;
+using UnitySlotTower.Core.Sim;
 
 namespace UnitySlotTower.Core.Units
 {
     /// <summary>
     /// 召喚（FR-020〜FR-022）。コイン消費、同時配置数の上限、種類ごとの待ち時間を管理する。
-    /// 判定の順は 配置先（配置先つきの TrySummon のみ）→ 配置上限 → 待ち時間 → コイン。
+    /// 判定の順は 一時停止 → 配置先（配置先つきの TrySummon のみ）→ 配置上限 → 待ち時間 → コイン。
     /// </summary>
     public sealed class UnitSummoner
     {
         private readonly UnitTable table;
         private readonly Wallet wallet;
         private readonly float[] cooldownRemaining;
+        private readonly PauseState pause;
 
         public int MaxDeployed { get; }
         public int DeployedCount { get; private set; }
@@ -20,12 +22,16 @@ namespace UnitySlotTower.Core.Units
         /// <summary>true の間は待ち時間を見ず、召喚しても待ち時間を始めない（準備中など。ウェーブ側から切り替える）。</summary>
         public bool IgnoreCooldown { get; set; }
 
-        public UnitSummoner(UnitTable table, Wallet wallet, int maxDeployed)
+        /// <summary>一時停止中か（共有の <see cref="PauseState"/> がなければ常に false）。停止中は召喚できず、待ち時間も進まない。</summary>
+        public bool IsPaused => pause != null && pause.IsPaused;
+
+        public UnitSummoner(UnitTable table, Wallet wallet, int maxDeployed, PauseState pause = null)
         {
             if (maxDeployed < 1) throw new ArgumentOutOfRangeException(nameof(maxDeployed));
             this.table = table ?? throw new ArgumentNullException(nameof(table));
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             MaxDeployed = maxDeployed;
+            this.pause = pause;
             cooldownRemaining = new float[table.Units.Count];
         }
 
@@ -34,6 +40,7 @@ namespace UnitySlotTower.Core.Units
         {
             var unit = table.Get(unitId);
             var index = IndexOf(unit);
+            if (IsPaused) return SummonResult.Paused;
             if (DeployedCount >= MaxDeployed) return SummonResult.DeployLimit;
             if (!IgnoreCooldown && cooldownRemaining[index] > 0f) return SummonResult.Cooldown;
             if (!wallet.TrySpend(unit.Cost)) return SummonResult.NotEnoughCoins;
@@ -50,6 +57,7 @@ namespace UnitySlotTower.Core.Units
         {
             var unit = table.Get(unitId);
             placed = null;
+            if (IsPaused) return SummonResult.Paused;
             var rejected = CheckPlacement(unit, board, cell);
             if (rejected != SummonResult.Success) return rejected;
             var result = TrySummon(unitId);
@@ -65,6 +73,7 @@ namespace UnitySlotTower.Core.Units
         {
             var unit = table.Get(unitId);
             placed = null;
+            if (IsPaused) return SummonResult.Paused;
             var rejected = CheckPlacement(unit, board, cell);
             if (rejected != SummonResult.Success) return rejected;
             if (DeployedCount >= MaxDeployed) return SummonResult.DeployLimit;
@@ -97,6 +106,7 @@ namespace UnitySlotTower.Core.Units
         /// <summary>時間を進める（固定ステップから呼ぶ）。待ち時間が減る。</summary>
         public void Tick(float deltaSeconds)
         {
+            if (IsPaused) return;
             for (var i = 0; i < cooldownRemaining.Length; i++)
                 if (cooldownRemaining[i] > 0f) cooldownRemaining[i] = Math.Max(0f, cooldownRemaining[i] - deltaSeconds);
         }

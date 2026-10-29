@@ -85,6 +85,16 @@ namespace UnitySlotTower.EditorTools
         private const float SymbolFontSize = 110f;
         private const float MinAutoFontSize = 10f;
 
+        // 一時停止の表示（T307）: 戦闘領域に重ねる暗幕と、縦 2 本線の印（文字は使わない）
+        private static readonly Color PauseDimColor = new Color(0f, 0f, 0f, 0.5f);
+        private static readonly Color PauseMarkColor = new Color(1f, 1f, 1f, 0.9f);
+        private const float PauseBarsBottom = 0.38f;
+        private const float PauseBarsTop = 0.62f;
+        private const float PauseBarLeftMin = 0.44f;
+        private const float PauseBarLeftMax = 0.48f;
+        private const float PauseBarRightMin = 0.52f;
+        private const float PauseBarRightMax = 0.56f;
+
         // 配置の入力（T208）: 操作バーの召喚アイコンと、フィールド上の印
         private static readonly Color PlacementValidColor = new Color(0.2f, 0.9f, 0.3f);
         private static readonly Color PlacementInvalidColor = new Color(0.95f, 0.15f, 0.15f);
@@ -132,6 +142,7 @@ namespace UnitySlotTower.EditorTools
             var field = CreateField(catalog);
             var runner = CreateBattle(catalog, field, cabinet, battleCamera);
             CreatePlacementUi(operationBar, runner, field, battleCamera);
+            CreatePauseOverlay(battleArea, runner);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -469,6 +480,22 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("markers").objectReferenceValue = markers;
             SetArray(serialized.FindProperty("icons"), icons);
             serialized.FindProperty("deployedText").objectReferenceValue = deployedText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>一時停止中だけ戦闘領域に出す暗幕と停止の印（T307）。表示の切り替えは PauseOverlay が行う。</summary>
+        private static void CreatePauseOverlay(RectTransform battleArea, BattleRunner runner)
+        {
+            var root = CreateRect("PauseOverlay", battleArea, Vector2.zero, Vector2.one);
+            var content = CreateImage("PauseContent", root, Vector2.zero, Vector2.one, PauseDimColor);
+            CreateImage("PauseBarLeft", content.transform, new Vector2(PauseBarLeftMin, PauseBarsBottom), new Vector2(PauseBarLeftMax, PauseBarsTop), PauseMarkColor);
+            CreateImage("PauseBarRight", content.transform, new Vector2(PauseBarRightMin, PauseBarsBottom), new Vector2(PauseBarRightMax, PauseBarsTop), PauseMarkColor);
+            content.gameObject.SetActive(false);
+
+            var overlay = root.gameObject.AddComponent<PauseOverlay>();
+            var serialized = new SerializedObject(overlay);
+            serialized.FindProperty("runner").objectReferenceValue = runner;
+            serialized.FindProperty("content").objectReferenceValue = content.gameObject;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 

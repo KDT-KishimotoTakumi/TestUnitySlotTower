@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnitySlotTower.Core.Economy;
 using UnitySlotTower.Core.Enemies;
 using UnitySlotTower.Core.Map;
+using UnitySlotTower.Core.Sim;
 using UnitySlotTower.Core.Units;
 
 namespace UnitySlotTower.Core.Combat
@@ -39,6 +40,7 @@ namespace UnitySlotTower.Core.Combat
         private readonly PlayerLife life;
         private readonly Wallet wallet;
         private readonly int lifeBonusPerLife;
+        private readonly PauseState pause;
         private readonly Dictionary<string, int> stock = new Dictionary<string, int>();
         private readonly List<PlacedUnit> retreatBuffer = new List<PlacedUnit>();
 
@@ -58,8 +60,10 @@ namespace UnitySlotTower.Core.Combat
         /// <summary>最終ウェーブが終わった。WaveCleared の後に 1 回だけ呼ぶ。</summary>
         public event Action AllWavesCleared;
 
-        public WaveFlow(UnitSummoner summoner, PlayerLife life, Wallet wallet, int lifeBonusPerLife, int waveCount = DefaultWaveCount)
+        public WaveFlow(UnitSummoner summoner, PlayerLife life, Wallet wallet, int lifeBonusPerLife, int waveCount = DefaultWaveCount,
+            PauseState pause = null)
         {
+            this.pause = pause;
             this.summoner = summoner ?? throw new ArgumentNullException(nameof(summoner));
             this.life = life ?? throw new ArgumentNullException(nameof(life));
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
@@ -106,6 +110,7 @@ namespace UnitySlotTower.Core.Combat
         public void Tick(float deltaSeconds)
         {
             if (State != WaveState.Running) return;
+            if (pause != null && pause.IsPaused) return;
             simulation.Step(deltaSeconds);
             if (life.IsGameOver) return;
             if (schedule.IsFinished && enemies.Active.Count == 0) FinishWave();
@@ -118,6 +123,7 @@ namespace UnitySlotTower.Core.Combat
         public SummonResult TrySummonFromStock(string unitId, PlacementBoard targetBoard, GridPoint cell, Facing facing, out PlacedUnit placed)
         {
             placed = null;
+            if (pause != null && pause.IsPaused) return SummonResult.Paused;
             if (State != WaveState.Preparing && State != WaveState.Running) return SummonResult.WaveNotActive;
             if (GetStock(unitId) <= 0) return SummonResult.NoStock;
             var result = summoner.TrySummonFree(unitId, targetBoard, cell, facing, out placed);

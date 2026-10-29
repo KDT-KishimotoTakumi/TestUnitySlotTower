@@ -87,9 +87,16 @@ namespace UnitySlotTower.Runtime
         private int shownCoins = -1;
         private int shownPayout = -1;
         private float shownWaitRatio = -1f;
+        private bool audioPaused;
+        // 先バレの点滅の位相に使う累積時間。一時停止中は進めず、再開で続きから点滅する
+        private float viewTime;
 
         public Wallet Wallet { get; private set; }
         public SlotMachine Machine { get; private set; }
+        /// <summary>一時停止の共有状態（戦闘の <see cref="BattleRunner"/> と同じものを使う）。</summary>
+        public PauseState Pause { get; private set; }
+        /// <summary>役ごとの図柄・払い出し（一時停止中の説明の閲覧用。読み取り専用）。</summary>
+        public System.Collections.Generic.IReadOnlyList<SlotPayout> Payouts { get; private set; }
 
         private void Awake()
         {
@@ -108,7 +115,9 @@ namespace UnitySlotTower.Runtime
             var tables = catalog.LoadTables();
             waitSeconds = tables.SlotRules.WaitSeconds;
             Wallet = new Wallet(tables.GameConfig.InitialCoins);
-            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting);
+            Pause = new PauseState();
+            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting, Pause);
+            Payouts = tables.SlotPayouts.Payouts;
 
             var reels = tables.SlotReels;
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++) reelViews[reel].Bind(reels, reel);
@@ -138,6 +147,9 @@ namespace UnitySlotTower.Runtime
 
         private void OnDisable()
         {
+            // 一時停止中に無効化されても、音を止めたままにしない
+            if (audioPaused && audioSource != null) audioSource.UnPause();
+            audioPaused = false;
             leverButton.onClick.RemoveListener(leverClick);
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++) stopButtons[reel].onClick.RemoveListener(stopClicks[reel]);
 
@@ -169,16 +181,33 @@ namespace UnitySlotTower.Runtime
 
         private void Update()
         {
+            // 一時停止中は時計を止める（バックログを溜めない）。リールの回転・ウェイトは再開で続きから進む
+            var paused = Machine.IsPaused;
+            clock.Paused = paused;
             var deltaTime = Time.deltaTime;
             clock.Advance(deltaTime, stepAction);
-            RefreshReels(deltaTime);
-            RefreshDisplays(deltaTime);
-            RefreshLamps();
+            // 引き込みのスライドや点滅など、表示側の時間も止める
+            var viewDelta = paused ? 0f : deltaTime;
+            viewTime += viewDelta;
+            RefreshReels(viewDelta);
+            RefreshDisplays(viewDelta);
+            RefreshLamps(paused);
+            RefreshAudio(paused);
         }
 
-        /// <summary>レバー（ベット込み）。ボタンとキーの両方から呼ばれる。</summary>
+        // 鳴っている音（先バレのアルペジオなど）も止めて、再開で続きから鳴らす
+        private void RefreshAudio(bool paused)
+        {
+            if (paused == audioPaused) return;
+            audioPaused = paused;
+            if (paused) audioSource.Pause();
+            else audioSource.UnPause();
+        }
+
+        /// <summary>レバー（ベット込み）。ボタンとキーの両方から呼ばれる。一時停止中は受け付けない（FR-012）。</summary>
         public void HandleLever()
         {
+            if (Machine.IsPaused) return;
             switch (Machine.PullLever())
             {
                 case LeverResult.Started:
@@ -192,9 +221,10 @@ namespace UnitySlotTower.Runtime
             }
         }
 
-        /// <summary>リール停止。reel は 0=左, 1=中, 2=右。</summary>
+        /// <summary>リール停止。reel は 0=左, 1=中, 2=右。一時停止中は受け付けない（FR-012）。</summary>
         public void HandleStop(int reel)
         {
+            if (Machine.IsPaused) return;
             if (Machine.PressStop(reel) == StopResult.Stopped) Play(stopClip);
         }
 
@@ -258,17 +288,17 @@ namespace UnitySlotTower.Runtime
             }
         }
 
-        private void RefreshLamps()
+        private void RefreshLamps(bool paused)
         {
             var spinning = Machine.Phase == SlotPhase.Spinning;
-            var ready = Machine.Phase == SlotPhase.Idle && Machine.WaitRemaining <= 0f;
+            var ready = !paused && Machine.Phase == SlotPhase.Idle && Machine.WaitRemaining <= 0f;
             leverButton.targetGraphic.color = ready ? ButtonOn : ButtonOff;
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
-                stopButtons[reel].targetGraphic.color = spinning && !Machine.IsStopped(reel) ? ButtonOn : ButtonOff;
+                stopButtons[reel].targetGraphic.color = !paused && spinning && !Machine.IsStopped(reel) ? ButtonOn : ButtonOff;
 
             // 先バレ: 回転中だけランプが速く明滅しながら色を切り替え、筐体全体も薄く光る
             var active = spinning && Machine.Premonition;
-            var time = Time.time;
+            var time = viewTime;
             var lit = ((int)(time * PremonitionBlinkHz * 2f) & 1) == 0;
             var color = PremonitionColors[(int)(time * PremonitionColorHz) % PremonitionColors.Length];
             premonitionLamp.color = active && lit ? color : LampOff;

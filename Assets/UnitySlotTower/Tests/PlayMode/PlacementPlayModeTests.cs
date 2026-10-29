@@ -207,7 +207,10 @@ namespace UnitySlotTower.Tests
             var controller = input.Controller;
 
             yield return Tap(keyboard.escapeKey);
-            Assert.AreEqual(PlacementPhase.Idle, controller.Phase, "配置操作中でない Esc は何もしない");
+            Assert.AreEqual(PlacementPhase.Idle, controller.Phase, "配置操作中でない Esc は配置に何もしない");
+            Assert.IsTrue(runner.IsPaused, "配置操作中でない Esc は一時停止になる（T307）");
+            yield return Tap(keyboard.escapeKey);
+            Assert.IsFalse(runner.IsPaused, "もう一度 Esc で再開する");
 
             yield return Tap(keyboard.digit1Key);
             yield return Tap(keyboard.enterKey);

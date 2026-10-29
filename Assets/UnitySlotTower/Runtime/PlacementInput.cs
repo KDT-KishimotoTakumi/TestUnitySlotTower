@@ -20,6 +20,7 @@ namespace UnitySlotTower.Runtime
         public const string CancelPath = "Game/Cancel";
         public const string ConfirmPath = "Game/Confirm";
         public const string CursorMovePath = "Game/CursorMove";
+        public const string PausePath = "Game/Pause";
         public const string SummonSelectPrefix = "Game/SummonSelect";
         private const int MaxIcons = 5;
         private const float AxisThreshold = 0.5f;
@@ -44,6 +45,7 @@ namespace UnitySlotTower.Runtime
         private InputAction cancelAction;
         private InputAction confirmAction;
         private InputAction cursorMoveAction;
+        private InputAction pauseAction;
         private Vector2 lastPointer;
         private Vector2 lastMove;
         private bool previewShown;
@@ -75,6 +77,7 @@ namespace UnitySlotTower.Runtime
             cancelAction = Find(CancelPath);
             confirmAction = Find(ConfirmPath);
             cursorMoveAction = Find(CursorMovePath);
+            pauseAction = Find(PausePath);
             for (var i = 0; i < MaxIcons; i++) summonActions[i] = Find(SummonSelectPrefix + (i + 1));
         }
 
@@ -87,6 +90,7 @@ namespace UnitySlotTower.Runtime
             Disable(cancelAction);
             Disable(confirmAction);
             Disable(cursorMoveAction);
+            Disable(pauseAction);
             for (var i = 0; i < MaxIcons; i++) Disable(summonActions[i]);
             lastMove = Vector2.zero;
         }
@@ -133,10 +137,40 @@ namespace UnitySlotTower.Runtime
         public void Poll()
         {
             if (!EnsureBound() || pointAction == null) return;
+            if (runner.IsPaused)
+            {
+                PollPaused(true);
+                RefreshIcons();
+                return;
+            }
             PollKeyboard();
+            // このフレームのキーで一時停止した場合は、マウスを読まずに停止中の処理へ移る（Pause の押下は二重に読まない）
+            if (runner.IsPaused)
+            {
+                PollPaused(false);
+                RefreshIcons();
+                return;
+            }
             PollMouse();
             RefreshPlacementView();
             RefreshIcons();
+        }
+
+        /// <summary>
+        /// 一時停止中の入力（FR-012）。配置・強化・選択は受け付けず、再開（Pause）だけ読む。
+        /// 停止した時点で途中だった配置操作は取りやめ、印と範囲プレビューを消す。
+        /// </summary>
+        private void PollPaused(bool readPause)
+        {
+            if (controller.IsActive)
+            {
+                AbortPlacement();
+                RefreshPlacementView();
+            }
+            // マウスの移動量は読み捨てる（再開直後に古い差分で向きが動かないように）
+            lastPointer = pointAction.ReadValue<Vector2>();
+            lastMove = cursorMoveAction.ReadValue<Vector2>();
+            if (readPause && pauseAction.WasPressedThisFrame()) runner.TogglePause();
         }
 
         private bool EnsureBound()
@@ -188,8 +222,10 @@ namespace UnitySlotTower.Runtime
             else if (dy != 0) controller.Arrow(0, dy);
 
             if (confirmAction.WasPressedThisFrame()) controller.Confirm();
-            // Esc は Cancel と Pause の両方に割り当て済み。配置操作中でなければ何もしない（Pause は T304 以降）
-            if (cancelAction.WasPressedThisFrame()) controller.Cancel();
+            // Esc は Cancel と Pause の両方に割り当て済み。配置操作中の Esc は取り消しを優先し、待機中のときだけ一時停止する。
+            // P は Cancel に割り当てがないので、配置操作中でも一時停止できる（途中の操作は PollPaused で取りやめる）
+            var cancelled = cancelAction.WasPressedThisFrame() && controller.Cancel();
+            if (pauseAction.WasPressedThisFrame() && !cancelled) runner.TogglePause();
         }
 
         private static int Edge(float now, float before)

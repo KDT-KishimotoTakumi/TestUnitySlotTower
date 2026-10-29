@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnitySlotTower.Core.Economy;
+using UnitySlotTower.Core.Sim;
 
 namespace UnitySlotTower.Core.Units
 {
@@ -10,6 +11,8 @@ namespace UnitySlotTower.Core.Units
         Success,
         MaxLevel,
         NotEnoughCoins,
+        /// <summary>一時停止中（FR-012）。</summary>
+        Paused,
     }
 
     /// <summary>
@@ -20,14 +23,16 @@ namespace UnitySlotTower.Core.Units
     {
         private readonly UnitUpgradeTable table;
         private readonly Wallet wallet;
+        private readonly PauseState pause;
         private PlacementBoard board;
         private readonly Dictionary<string, int> levels = new Dictionary<string, int>();
 
         /// <summary>段階が上がった。引数は種類の id と新しい段階（盤面への反映が済んだ後に呼ぶ）。</summary>
         public event Action<string, int> Upgraded;
 
-        public UnitUpgrades(UnitUpgradeTable table, Wallet wallet, PlacementBoard board)
+        public UnitUpgrades(UnitUpgradeTable table, Wallet wallet, PlacementBoard board, PauseState pause = null)
         {
+            this.pause = pause;
             this.table = table ?? throw new ArgumentNullException(nameof(table));
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             this.board = board ?? throw new ArgumentNullException(nameof(board));
@@ -60,6 +65,7 @@ namespace UnitySlotTower.Core.Units
         /// <summary>種類 unitId を次の段階に上げる。成功するとコインを引き、盤面の同種の全個体に反映する。</summary>
         public UpgradeResult TryUpgrade(string unitId)
         {
+            if (pause != null && pause.IsPaused) return UpgradeResult.Paused;
             var steps = table.GetSteps(unitId);
             var level = GetLevel(unitId);
             if (level - 1 >= steps.Count) return UpgradeResult.MaxLevel;

@@ -89,11 +89,12 @@ namespace UnitySlotTower.Core.Units
         public bool IsActive => Phase != PlacementPhase.Idle;
 
         /// <summary>
-        /// 今この種類を召喚できるか。<see cref="UnitSummoner"/> の判定順（配置上限 → 待ち時間 → コイン）を、状態を変えずに見る。
+        /// 今この種類を召喚できるか。<see cref="UnitSummoner"/> の判定順（一時停止 → 配置上限 → 待ち時間 → コイン）を、状態を変えずに見る。
         /// 召喚できるなら Success。
         /// </summary>
         public SummonResult Availability(UnitDef unit)
         {
+            if (summoner.IsPaused) return SummonResult.Paused;
             if (summoner.DeployedCount >= summoner.MaxDeployed) return SummonResult.DeployLimit;
             if (!summoner.IgnoreCooldown && summoner.CooldownRemaining(unit.Id) > 0f) return SummonResult.Cooldown;
             if (!wallet.CanAfford(unit.Cost)) return SummonResult.NotEnoughCoins;

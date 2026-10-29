@@ -79,6 +79,10 @@ namespace UnitySlotTower.Runtime
         public Wallet Wallet { get; private set; }
         /// <summary>ウェーブ進行（準備・戦闘・無料ストック）。Start 前は null。</summary>
         public WaveFlow Flow { get; private set; }
+        /// <summary>一時停止の共有状態（筐体と同じもの）。Start 前は null。</summary>
+        public PauseState Pause { get; private set; }
+        /// <summary>一時停止中か（FR-012）。Start 前は false。</summary>
+        public bool IsPaused => Pause != null && Pause.IsPaused;
         /// <summary>味方の表（行の順が召喚アイコン・数字キーの順）。Start 前は null。</summary>
         public UnitTable Units => unitTable;
 
@@ -119,9 +123,11 @@ namespace UnitySlotTower.Runtime
             if (cabinet != null && cabinet.Wallet == null)
                 Debug.LogWarning("BattleRunner: 筐体の Wallet がまだありません。別の財布を使います（スロットとコインが共有されません）", this);
             Wallet = cabinet != null && cabinet.Wallet != null ? cabinet.Wallet : new Wallet(config.InitialCoins);
-            Summoner = new UnitSummoner(unitTable, Wallet, config.MaxDeployed);
+            // 一時停止は筐体と共有する（戦闘とスロットが同時に止まる）。筐体がなければ戦闘だけの状態
+            Pause = cabinet != null && cabinet.Pause != null ? cabinet.Pause : new PauseState();
+            Summoner = new UnitSummoner(unitTable, Wallet, config.MaxDeployed, Pause);
             Life = new PlayerLife(config.StartingLife);
-            Flow = new WaveFlow(Summoner, Life, Wallet, config.LifeBonusPerLife);
+            Flow = new WaveFlow(Summoner, Life, Wallet, config.LifeBonusPerLife, pause: Pause);
             Flow.WaveCleared += waveClearedAction;
             BuildBattle(wave, map);
 
@@ -139,10 +145,10 @@ namespace UnitySlotTower.Runtime
             var first = Board == null;
             Board = new PlacementBoard(map);
             Enemies = new EnemyField(Board, schedule);
-            if (first) Upgrades = new UnitUpgrades(tables.UnitUpgrades, Wallet, Board);
+            if (first) Upgrades = new UnitUpgrades(tables.UnitUpgrades, Wallet, Board, Pause);
             else Upgrades.Rebind(Board);
             Simulation = new BattleSimulation(Board, Enemies, Summoner, tables.UnitRanges, config.BufferAtkMultiplier,
-                Life, Wallet, dropRandom, config.RefundRate);
+                Life, Wallet, dropRandom, config.RefundRate, Pause);
             if (first) view.Bind(field, Board, Enemies, tables.UnitRanges, Life, config.MaxDeployed);
             else view.Rebind(Board, Enemies);
             Flow.Prepare(waveNumber, Board, Enemies, schedule, Simulation);
@@ -191,13 +197,29 @@ namespace UnitySlotTower.Runtime
             advancePending = autoStartWave && Flow.State == WaveState.Cleared;
         }
 
+        /// <summary>一時停止を切り替える（FR-012）。停止中は戦闘・召喚の待ち時間・ウェーブ進行・スロットの時間が進まない。Start 前は何もしない。</summary>
+        public void SetPaused(bool paused)
+        {
+            if (Pause == null) return;
+            Pause.SetPaused(paused);
+        }
+
+        /// <summary>一時停止と再開を切り替える（Esc / P、ポーズボタンの入口）。切り替え後に停止中なら true。Start 前は false。</summary>
+        public bool TogglePause()
+        {
+            return Pause != null && Pause.Toggle();
+        }
+
         private void Update()
         {
+            // 停止中はバックログを溜めない（SimClock が 0 ステップを返す）
+            clock.Paused = IsPaused;
             clock.Advance(Time.deltaTime, stepAction);
         }
 
         private void Step()
         {
+            if (IsPaused) return;
             if (advancePending)
             {
                 advancePending = false;

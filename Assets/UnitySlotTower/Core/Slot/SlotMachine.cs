@@ -17,6 +17,8 @@ namespace UnitySlotTower.Core.Slot
         NotEnoughCoins,
         Waiting,
         Busy,
+        /// <summary>一時停止中（FR-012）。何も変わらない。</summary>
+        Paused,
     }
 
     public enum StopResult
@@ -24,6 +26,8 @@ namespace UnitySlotTower.Core.Slot
         Stopped,
         NotSpinning,
         AlreadyStopped,
+        /// <summary>一時停止中（FR-012）。何も変わらない。</summary>
+        Paused,
     }
 
     /// <summary>1ゲームの結果。</summary>
@@ -83,6 +87,7 @@ namespace UnitySlotTower.Core.Slot
         private readonly float waitSeconds;
         private readonly int bigMaxPayout;
         private readonly int regMaxPayout;
+        private readonly PauseState pause;
         private readonly double kakuhenEntryRate;
         private readonly int kakuhenGames;
         private readonly int[] stops = { SlotReelController.Unstopped, SlotReelController.Unstopped, SlotReelController.Unstopped };
@@ -97,7 +102,7 @@ namespace UnitySlotTower.Core.Slot
         private SlotPayout carriedBonus;
         private bool bonusFromKakuhen;
 
-        public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting)
+        public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting, PauseState pause = null)
         {
             if (setting < SlotProbabilityTable.MinSetting || setting > SlotProbabilityTable.MaxSetting)
                 throw new ArgumentOutOfRangeException(nameof(setting));
@@ -115,12 +120,16 @@ namespace UnitySlotTower.Core.Slot
             kakuhenGames = rules.KakuhenGames;
             this.wallet = wallet;
             this.random = random;
+            this.pause = pause;
             Setting = setting;
         }
 
         public int Setting { get; }
         public SlotState State { get; private set; } = SlotState.Normal;
         public SlotPhase Phase { get; private set; } = SlotPhase.Idle;
+
+        /// <summary>一時停止中か（共有の <see cref="PauseState"/> がなければ常に false）。停止中はレバー・ストップが効かず、時間も進まない。</summary>
+        public bool IsPaused => pause != null && pause.IsPaused;
 
         /// <summary>前ゲームがリプレイで、次ゲームの掛け金が不要。</summary>
         public bool ReplayPending { get; private set; }
@@ -161,6 +170,7 @@ namespace UnitySlotTower.Core.Slot
         /// <summary>ベットとレバーを1操作にまとめたもの。掛け金を自動で投入し、内部抽選をして回転を始める。</summary>
         public LeverResult PullLever()
         {
+            if (IsPaused) return LeverResult.Paused;
             if (Phase != SlotPhase.Idle) return LeverResult.Busy;
             if (waitRemaining > 0f) return LeverResult.Waiting;
 
@@ -181,9 +191,10 @@ namespace UnitySlotTower.Core.Slot
             return LeverResult.Started;
         }
 
-        /// <summary>時間を進める（固定ステップから呼ぶ）。リールの回転とウェイトが進む。</summary>
+        /// <summary>時間を進める（固定ステップから呼ぶ）。リールの回転とウェイトが進む。一時停止中は進まず、再開で続きから回る。</summary>
         public void Tick(float deltaSeconds)
         {
+            if (IsPaused) return;
             if (waitRemaining > 0f) waitRemaining = Math.Max(0f, waitRemaining - deltaSeconds);
             if (Phase != SlotPhase.Spinning) return;
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
@@ -196,6 +207,7 @@ namespace UnitySlotTower.Core.Slot
         /// <summary>リールを止める。押した瞬間の位置から、フラグに合わせた停止位置を決める。</summary>
         public StopResult PressStop(int reel)
         {
+            if (IsPaused) return StopResult.Paused;
             if (Phase != SlotPhase.Spinning) return StopResult.NotSpinning;
             if (IsStopped(reel)) return StopResult.AlreadyStopped;
 

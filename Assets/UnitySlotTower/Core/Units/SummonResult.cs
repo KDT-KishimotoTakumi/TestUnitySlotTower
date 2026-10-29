@@ -14,5 +14,7 @@ namespace UnitySlotTower.Core.Units
         // 以下は無料ストックからの配置（WaveFlow.TrySummonFromStock）で、ストックを使えないとき
         NoStock,
         WaveNotActive,
+        /// <summary>一時停止中（FR-012）。召喚・ストックからの配置は拒否される。</summary>
+        Paused,
     }
 }
