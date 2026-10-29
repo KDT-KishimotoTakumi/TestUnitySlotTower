@@ -56,8 +56,8 @@ namespace UnitySlotTower.Runtime
         [SerializeField, Min(1)] private int wave = 1;
         [Tooltip("確認用。true のとき Start で数体の味方を置く（本番では false）")]
         [SerializeField] private bool placeDemoUnitsOnStart;
-        [Tooltip("確認用。true のとき、準備中を飛ばして Start から戦闘を始め、ウェーブ終了後は次のウェーブも自動で始める（▶ ボタンができるまでの既定は true）")]
-        [SerializeField] private bool autoStartWave = true;
+        [Tooltip("確認用。true のとき、準備中を飛ばして Start から戦闘を始め、ウェーブ終了後は次のウェーブも自動で始める（本番では false。▶ で始める）")]
+        [SerializeField] private bool autoStartWave;
 
         private readonly SimClock clock = new SimClock();
 
@@ -154,10 +154,10 @@ namespace UnitySlotTower.Runtime
             Flow.Prepare(waveNumber, Board, Enemies, schedule, Simulation);
         }
 
-        /// <summary>準備中なら戦闘を始める（▶ ボタンの入口、T308）。始められたら true。</summary>
+        /// <summary>準備中なら戦闘を始める（▶ ボタン・決定キーの入口、T308）。一時停止中は始められない。始められたら true。</summary>
         public bool StartWave()
         {
-            return Flow != null && Flow.StartWave();
+            return Flow != null && !IsPaused && Flow.StartWave();
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace UnitySlotTower.Runtime
         // Step の最中に盤面を作り直さないよう、次の Step の頭で進める
         private void OnWaveCleared(int clearedWave, int bonus)
         {
-            advancePending = autoStartWave && Flow.State == WaveState.Cleared;
+            advancePending = Flow.State == WaveState.Cleared;
         }
 
         /// <summary>一時停止を切り替える（FR-012）。停止中は戦闘・召喚の待ち時間・ウェーブ進行・スロットの時間が進まない。Start 前は何もしない。</summary>
@@ -223,7 +223,8 @@ namespace UnitySlotTower.Runtime
             if (advancePending)
             {
                 advancePending = false;
-                if (PrepareNextWave()) Flow.StartWave();
+                // 次のウェーブは準備中にする。autoStartWave のときだけ ▶ を待たずに始める
+                if (PrepareNextWave() && autoStartWave) Flow.StartWave();
             }
             Summoner.Tick(SimClock.StepSeconds);
             Flow.Tick(SimClock.StepSeconds);

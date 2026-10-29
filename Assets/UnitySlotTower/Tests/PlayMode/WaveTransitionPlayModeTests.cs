@@ -32,6 +32,8 @@ namespace UnitySlotTower.Tests
             }
             Assert.IsNotNull(runner, "BattleRunner がシーンにありません");
             Assert.IsNotNull(runner.Flow, "BattleRunner が始まっていません");
+            Assert.AreEqual(WaveState.Preparing, runner.Flow.State, "シーンは準備中で始まる（▶ を待つ）");
+            Assert.IsTrue(runner.StartWave());
             onLoaded(runner, UnityEngine.Object.FindFirstObjectByType<BattleFieldView>());
         }
 
@@ -55,7 +57,9 @@ namespace UnitySlotTower.Tests
             Assert.AreEqual("w2", field.Map.Id, "フィールドの表示が W2 のマップになる");
             Assert.AreEqual("w2", runner.Board.Map.Id, "盤面も W2 のマップ");
             Assert.AreNotSame(firstBoard, runner.Board);
-            Assert.AreEqual(WaveState.Running, runner.Flow.State, "autoStartWave で戦闘が始まる");
+            Assert.AreEqual(WaveState.Preparing, runner.Flow.State, "次のウェーブも準備中で止まり、▶ を待つ");
+            Assert.IsTrue(runner.StartWave());
+            Assert.AreEqual(WaveState.Running, runner.Flow.State);
         }
 
         [UnityTest]
@@ -69,6 +73,7 @@ namespace UnitySlotTower.Tests
             var finalBossSeen = false;
             for (var i = 0; i < MaxSteps && runner.Flow.State != WaveState.Victory; i++)
             {
+                if (runner.Flow.State == WaveState.Preparing) runner.StartWave();
                 // 味方がいないので、最終ボスは出たらすぐ倒す（ゴールに着くと全ライフを失うため）。呼び出された雑魚は自分で進んで消える
                 var active = runner.Enemies.Active;
                 for (var k = 0; k < active.Count; k++)

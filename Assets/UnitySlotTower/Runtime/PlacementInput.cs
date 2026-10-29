@@ -26,6 +26,8 @@ namespace UnitySlotTower.Runtime
         private const float AxisThreshold = 0.5f;
         // 向きの不感帯（戦闘領域の高さに対する割合。マスの中心から離れるまで向きを変えない）
         private const float FacingDeadZoneFraction = 0.03f;
+        // 配置の確定に使った決定キーの直後は、決定キーで ▶ を押さない時間（秒、unscaledTime。確定の連打での誤爆防止）
+        public const float StartKeyGuardSeconds = 0.3f;
 
         [SerializeField] private BattleRunner runner;
         [SerializeField] private BattleFieldView field;
@@ -49,6 +51,7 @@ namespace UnitySlotTower.Runtime
         private Vector2 lastPointer;
         private Vector2 lastMove;
         private bool previewShown;
+        private float lastPlacementConfirmTime = float.NegativeInfinity;
         private int shownDeployed = -1;
 
         // 前回の表示に使った状態（変わったときだけ印と範囲を更新する）
@@ -221,7 +224,19 @@ namespace UnitySlotTower.Runtime
             if (dx != 0) controller.Arrow(dx, 0);
             else if (dy != 0) controller.Arrow(0, dy);
 
-            if (confirmAction.WasPressedThisFrame()) controller.Confirm();
+            // 決定キーは配置操作の確定。配置操作中でないときの決定キーは ▶（ウェーブ開始。準備中以外は何も起きない）
+            if (confirmAction.WasPressedThisFrame())
+            {
+                if (controller.IsActive)
+                {
+                    controller.Confirm();   // 成功・失敗とも、このキーは配置に使った
+                    lastPlacementConfirmTime = Time.unscaledTime;
+                }
+                else if (Time.unscaledTime - lastPlacementConfirmTime >= StartKeyGuardSeconds)
+                {
+                    runner.StartWave();
+                }
+            }
             // Esc は Cancel と Pause の両方に割り当て済み。配置操作中の Esc は取り消しを優先し、待機中のときだけ一時停止する。
             // P は Cancel に割り当てがないので、配置操作中でも一時停止できる（途中の操作は PollPaused で取りやめる）
             var cancelled = cancelAction.WasPressedThisFrame() && controller.Cancel();
@@ -319,7 +334,8 @@ namespace UnitySlotTower.Runtime
                 var ratio = unit.Cooldown > 0f && !runner.Summoner.IgnoreCooldown
                     ? runner.Summoner.CooldownRemaining(unit.Id) / unit.Cooldown
                     : 0f;
-                icons[i].Refresh(availability, ratio, selected != null && ReferenceEquals(selected, unit));
+                var stock = runner.Flow != null ? runner.Flow.GetStock(unit.Id) : 0;
+                icons[i].Refresh(availability, ratio, selected != null && ReferenceEquals(selected, unit), stock, runner.Upgrades.GetLevel(unit.Id));
             }
 
             var deployed = runner.Summoner.DeployedCount;

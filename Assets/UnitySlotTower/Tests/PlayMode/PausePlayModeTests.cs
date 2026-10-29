@@ -53,6 +53,8 @@ namespace UnitySlotTower.Tests
             Assert.IsNotNull(cabinet, "SlotCabinetView がシーンにありません");
             Assert.IsNotNull(input, "PlacementInput がシーンにありません");
             Assert.IsNotNull(input.Controller, "PlacementInput が戦闘につながっていません");
+            // シーンは準備中で始まる。敵を出すため ▶ で戦闘を始める
+            Assert.IsTrue(runner.StartWave(), "準備中なら始められる");
         }
 
         private IEnumerator Tap(UnityEngine.InputSystem.Controls.ButtonControl control)

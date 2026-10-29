@@ -102,30 +102,78 @@ namespace UnitySlotTower.EditorTools
         private static readonly Color PlacementArrowOnColor = new Color(1f, 0.85f, 0.1f);
         private static readonly Color CooldownFillColor = new Color(0f, 0f, 0f, 0.55f);
         private static readonly Color KeyLabelColor = new Color(1f, 1f, 1f, 0.7f);
+        private static readonly Color CardColor = new Color(0.1f, 0.12f, 0.18f);
+        private static readonly Color CardTextColor = Color.white;
+        private static readonly Color LifeTextColor = Color.white;
+        private static readonly Color WaveTextColor = new Color(0.85f, 0.92f, 1f);
+        private static readonly Color PauseBarColor = new Color(1f, 1f, 1f, 0.95f);
         private const string RoundedSpritePath = "UI/Skin/UISprite.psd";
         private const string CircleSpritePath = "UI/Skin/Knob.psd";
-        private const float IconLeft = 0.01f;
-        private const float IconStride = 0.15f;
-        private const float IconWidth = 0.14f;
-        private const float IconBottom = 0.08f;
-        private const float IconTop = 0.92f;
-        private const float BodyLeft = 0.06f;
-        private const float BodyRight = 0.46f;
-        private const float BodyBottom = 0.12f;
-        private const float BodyTop = 0.88f;
-        private const float CapsuleLeft = 0.14f;
-        private const float CapsuleRight = 0.38f;
+
+        // 操作バーの配置（OperationBar に対する割合）。T308。バーの縦横比は GameLayout から求める
+        private const float BarUnitsWidth = GameLayout.BattleWidthFraction * GameLayout.ReferenceWidth;
+        private const float BarUnitsHeight = GameLayout.OperationBarHeightFraction * GameLayout.ReferenceHeight;
+        // 左: ライフ・コイン・ウェーブ番号（上から 3 段。段ごとにアイコン + 数字）
+        private const float InfoLeft = 0.012f;
+        private const float InfoRight = 0.25f;
+        private const float InfoIconRight = 0.3f;
+        private const float InfoTextLeft = 0.34f;
+        private const float InfoFontSize = 70f;
+        private const float LifeRowBottom = 0.68f;
+        private const float LifeRowTop = 0.97f;
+        private const float CoinRowBottom = 0.36f;
+        private const float CoinRowTop = 0.65f;
+        private const float WaveRowBottom = 0.04f;
+        private const float WaveRowTop = 0.33f;
+        // 中央: 召喚カード 5 枚
+        private const float CardLeft = 0.27f;
+        private const float CardStride = 0.106f;
+        private const float CardWidth = 0.1f;
+        private const float CardBottom = 0.06f;
+        private const float CardTop = 0.94f;
+        private const float GlowMarginX = 0.06f;
+        private const float GlowMarginY = 0.05f;
+        private const float GlyphLeft = 0.08f;
+        private const float GlyphRight = 0.92f;
+        private const float GlyphBottom = 0.34f;
+        private const float GlyphTop = 0.8f;
+        private const float BufferGlyphScaleX = 0.55f;
         private const float DiamondAngle = 45f;
         private const float DiamondScale = 0.75f;
-        private const float CostLeft = 0.48f;
-        private const float CostBottom = 0.05f;
-        private const float KeyRight = 0.4f;
-        private const float KeyBottom = 0.55f;
-        private const float DeployedLeft = 0.78f;
+        private const float KeyLeft = 0.02f;
+        private const float KeyRight = 0.26f;
+        private const float KeyBottom = 0.78f;
+        private const float StockLeft = 0.56f;
+        private const float StockBottom = 0.34f;
+        private const float StockTop = 0.54f;
+        private const float CostLeft = 0.06f;
+        private const float CostRight = 0.94f;
+        private const float CostBottom = 0.02f;
+        private const float CostTop = 0.34f;
+        private const float LevelLeft = 0.3f;
+        private const float LevelRight = 0.98f;
+        private const float LevelCenterY = 0.89f;
+        private const float LevelSideRatio = 0.68f;
+        private const float IconCostFontSize = 80f;
+        private const float IconKeyFontSize = 32f;
+        private const float IconStockFontSize = 44f;
+        // 右: 配置数と ▶ ❚❚
+        private const float DeployedLeft = 0.83f;
         private const float DeployedRight = 0.99f;
+        private const float DeployedBottom = 0.7f;
+        private const float DeployedTop = 0.97f;
         private const float DeployedFontSize = 60f;
-        private const float IconCostFontSize = 50f;
-        private const float IconKeyFontSize = 28f;
+        private const float StartLeft = 0.83f;
+        private const float StartRight = 0.905f;
+        private const float PauseLeft = 0.915f;
+        private const float PauseRight = 0.99f;
+        private const float ButtonBottom = 0.08f;
+        private const float ButtonTop = 0.66f;
+        private const float GlyphInset = 0.2f;
+        private const float PauseBarInnerMin = 0.28f;
+        private const float PauseBarInnerMax = 0.44f;
+        private const float PauseBarOuterMin = 0.56f;
+        private const float PauseBarOuterMax = 0.72f;
 
         [MenuItem("Tools/UnitySlotTower/Build Game Scene")]
         public static void Build()
@@ -142,6 +190,7 @@ namespace UnitySlotTower.EditorTools
             var field = CreateField(catalog);
             var runner = CreateBattle(catalog, field, cabinet, battleCamera);
             CreatePlacementUi(operationBar, runner, field, battleCamera);
+            CreateOperationBar(operationBar, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
             CreatePauseOverlay(battleArea, runner);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
@@ -459,7 +508,7 @@ namespace UnitySlotTower.EditorTools
             var roles = (UnitRole[])System.Enum.GetValues(typeof(UnitRole));
             var icons = new SummonIcon[roles.Length];
             for (var i = 0; i < icons.Length; i++) icons[i] = CreateSummonIcon(i, roles[i], bar, font);
-            var deployedText = CreateLabel("DeployedText", bar, new Vector2(DeployedLeft, IconBottom), new Vector2(DeployedRight, IconTop),
+            var deployedText = CreateLabel("DeployedText", bar, new Vector2(DeployedLeft, DeployedBottom), new Vector2(DeployedRight, DeployedTop),
                 "0", DeployedFontSize, DisplayTextColor, font);
 
             var go = new GameObject("Placement");
@@ -499,19 +548,23 @@ namespace UnitySlotTower.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>召喚アイコン 1 つ。色と形が職、数字がコスト。形は 職ごとにグレーボックスの体（立方体／円柱／菱形／球／カプセル）に合わせる。</summary>
+        /// <summary>
+        /// 召喚カード 1 枚。色と形が職（グレーボックスの体に合わせた 立方体／円柱／菱形／球／カプセル）、下段の大きい数字がコスト、
+        /// 左上が選択キー、右上の菱形が強化段階、「×n」がストック。枠（Frame）は選択中に光る。
+        /// </summary>
         private static SummonIcon CreateSummonIcon(int index, UnitRole role, RectTransform bar, TMP_FontAsset font)
         {
-            var left = IconLeft + index * IconStride;
-            var root = CreateRect($"SummonIcon{index}", bar, new Vector2(left, IconBottom), new Vector2(left + IconWidth, IconTop));
-            var frame = root.gameObject.AddComponent<Image>();
-            frame.color = SummonIcon.FrameOff;
-            frame.raycastTarget = true;   // アイコン全体を押せる当たりにする（子の見た目は当たりに含めない）
+            var left = CardLeft + index * CardStride;
+            var root = CreateRect($"SummonIcon{index}", bar, new Vector2(left, CardBottom), new Vector2(left + CardWidth, CardTop));
+            var hit = root.gameObject.AddComponent<Image>();
+            hit.color = SummonIcon.DimClear;
+            hit.raycastTarget = true;   // カード全体を押せる当たりにする（子の見た目は当たりに含めない）
 
-            var bodyRect = CreateRect("Body", root, new Vector2(BodyLeft, BodyBottom), new Vector2(BodyRight, BodyTop));
-            var body = bodyRect.gameObject.AddComponent<Image>();
-            body.color = UnitColor(role);
-            body.raycastTarget = false;
+            var frame = CreateImage("Frame", root, new Vector2(-GlowMarginX, -GlowMarginY), new Vector2(1f + GlowMarginX, 1f + GlowMarginY), SummonIcon.FrameOff);
+            CreateImage("Background", root, Vector2.zero, Vector2.one, CardColor);
+
+            var body = CreateSquareImage("Body", root, new Vector2(GlyphLeft, GlyphBottom), new Vector2(GlyphRight, GlyphTop), UnitColor(role));
+            var bodyRect = body.rectTransform;
             switch (role)
             {
                 case UnitRole.Swordsman:
@@ -526,8 +579,7 @@ namespace UnitySlotTower.EditorTools
                     body.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(CircleSpritePath);
                     break;
                 case UnitRole.Buffer:
-                    bodyRect.anchorMin = new Vector2(CapsuleLeft, BodyBottom);
-                    bodyRect.anchorMax = new Vector2(CapsuleRight, BodyTop);
+                    bodyRect.localScale = new Vector3(BufferGlyphScaleX, 1f, 1f);
                     body.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
                     body.type = Image.Type.Sliced;
                     break;
@@ -535,8 +587,26 @@ namespace UnitySlotTower.EditorTools
 
             var dim = CreateImage("Dim", root, Vector2.zero, Vector2.one, SummonIcon.DimClear);
             var fill = CreateImage("CooldownFill", root, Vector2.zero, new Vector2(1f, 0f), CooldownFillColor).rectTransform;
-            var costText = CreateLabel("CostText", root, new Vector2(CostLeft, CostBottom), new Vector2(1f, 1f), "0", IconCostFontSize, SummonIcon.CostNormal, font);
-            var keyText = CreateLabel("KeyText", root, new Vector2(0f, KeyBottom), new Vector2(KeyRight, 1f), "0", IconKeyFontSize, KeyLabelColor, font);
+            var costText = CreateLabel("CostText", root, new Vector2(CostLeft, CostBottom), new Vector2(CostRight, CostTop), "0", IconCostFontSize, SummonIcon.CostNormal, font);
+            var keyText = CreateLabel("KeyText", root, new Vector2(KeyLeft, KeyBottom), new Vector2(KeyRight, 1f), "0", IconKeyFontSize, KeyLabelColor, font);
+            var stockText = CreateLabel("StockText", root, new Vector2(StockLeft, StockBottom), new Vector2(1f, StockTop), string.Empty, IconStockFontSize, CardTextColor, font);
+            stockText.alignment = TextAlignmentOptions.MidlineRight;
+
+            // 強化段階の菱形（右上に最大 5 つ）。正方形を 45 度回して作る
+            const float cardUnitsWidth = CardWidth * BarUnitsWidth;
+            const float cardUnitsHeight = (CardTop - CardBottom) * BarUnitsHeight;
+            const float levelStride = (LevelRight - LevelLeft) / SummonIcon.MaxLevel;
+            const float sideUnits = levelStride * cardUnitsWidth * LevelSideRatio;
+            const float halfX = sideUnits * 0.5f / cardUnitsWidth;
+            const float halfY = sideUnits * 0.5f / cardUnitsHeight;
+            var diamonds = new Image[SummonIcon.MaxLevel];
+            for (var i = 0; i < diamonds.Length; i++)
+            {
+                var centerX = LevelLeft + levelStride * (i + 0.5f);
+                diamonds[i] = CreateImage($"Level{i}", root, new Vector2(centerX - halfX, LevelCenterY - halfY),
+                    new Vector2(centerX + halfX, LevelCenterY + halfY), SummonIcon.DiamondOff);
+                diamonds[i].rectTransform.localRotation = Quaternion.Euler(0f, 0f, DiamondAngle);
+            }
 
             var icon = root.gameObject.AddComponent<SummonIcon>();
             var serialized = new SerializedObject(icon);
@@ -546,8 +616,89 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("frame").objectReferenceValue = frame;
             serialized.FindProperty("costText").objectReferenceValue = costText;
             serialized.FindProperty("keyText").objectReferenceValue = keyText;
+            serialized.FindProperty("stockText").objectReferenceValue = stockText;
+            SetArray(serialized.FindProperty("diamonds"), diamonds);
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return icon;
+        }
+
+        /// <summary>操作バーの左（ライフ・コイン・ウェーブ番号）と右（▶ ❚❚）。表示と押下は OperationBarView。T308。</summary>
+        private static void CreateOperationBar(RectTransform bar, BattleRunner runner, TMP_FontAsset font)
+        {
+            var info = CreateRect("Info", bar, new Vector2(InfoLeft, 0f), new Vector2(InfoRight, 1f));
+            var lifeIcon = CreateInfoIcon("LifeIcon", info, LifeRowBottom, LifeRowTop);
+            var lifeText = CreateInfoText("LifeText", info, LifeRowBottom, LifeRowTop, LifeTextColor, font);
+            var coinIcon = CreateInfoIcon("CoinIcon", info, CoinRowBottom, CoinRowTop);
+            var coinText = CreateInfoText("CoinText", info, CoinRowBottom, CoinRowTop, DisplayTextColor, font);
+            var flagIcon = CreateInfoIcon("WaveIcon", info, WaveRowBottom, WaveRowTop);
+            var waveText = CreateInfoText("WaveText", info, WaveRowBottom, WaveRowTop, WaveTextColor, font);
+
+            var startButton = CreateBarButton("StartButton", bar, StartLeft, StartRight, out var startBackground);
+            var startGlyph = CreateGlyph("StartGlyph", startBackground.transform);
+            var pauseButton = CreateBarButton("PauseButton", bar, PauseLeft, PauseRight, out var pauseBackground);
+            var pauseBars = CreateRect("PauseBars", pauseBackground.transform, Vector2.zero, Vector2.one).gameObject;
+            CreateImage("PauseBarLeft", pauseBars.transform, new Vector2(PauseBarInnerMin, GlyphInset), new Vector2(PauseBarInnerMax, 1f - GlyphInset), PauseBarColor);
+            CreateImage("PauseBarRight", pauseBars.transform, new Vector2(PauseBarOuterMin, GlyphInset), new Vector2(PauseBarOuterMax, 1f - GlyphInset), PauseBarColor);
+            var resumeGlyph = CreateGlyph("ResumeGlyph", pauseBackground.transform);
+            resumeGlyph.gameObject.SetActive(false);
+
+            var view = bar.gameObject.AddComponent<OperationBarView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("runner").objectReferenceValue = runner;
+            serialized.FindProperty("lifeText").objectReferenceValue = lifeText;
+            serialized.FindProperty("coinText").objectReferenceValue = coinText;
+            serialized.FindProperty("waveText").objectReferenceValue = waveText;
+            serialized.FindProperty("lifeIcon").objectReferenceValue = lifeIcon;
+            serialized.FindProperty("coinIcon").objectReferenceValue = coinIcon;
+            serialized.FindProperty("flagIcon").objectReferenceValue = flagIcon;
+            serialized.FindProperty("startButton").objectReferenceValue = startButton;
+            serialized.FindProperty("startBackground").objectReferenceValue = startBackground;
+            serialized.FindProperty("startGlyph").objectReferenceValue = startGlyph;
+            serialized.FindProperty("pauseButton").objectReferenceValue = pauseButton;
+            serialized.FindProperty("pauseBackground").objectReferenceValue = pauseBackground;
+            serialized.FindProperty("pauseBars").objectReferenceValue = pauseBars;
+            serialized.FindProperty("resumeGlyph").objectReferenceValue = resumeGlyph;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>左の 1 段のアイコン枠（正方形に保つ。スプライトは OperationBarView が Awake で入れる）。</summary>
+        private static Image CreateInfoIcon(string name, Transform parent, float bottom, float top)
+        {
+            return CreateSquareImage(name, parent, new Vector2(0f, bottom), new Vector2(InfoIconRight, top), Color.white);
+        }
+
+        private static TextMeshProUGUI CreateInfoText(string name, Transform parent, float bottom, float top, Color color, TMP_FontAsset font)
+        {
+            var label = CreateLabel(name, parent, new Vector2(InfoTextLeft, bottom), new Vector2(1f, top), "0", InfoFontSize, color, font);
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            return label;
+        }
+
+        private static BarButton CreateBarButton(string name, Transform parent, float left, float right, out Image background)
+        {
+            background = CreateImage(name, parent, new Vector2(left, ButtonBottom), new Vector2(right, ButtonTop), OperationBarView.PauseNormal);
+            background.raycastTarget = true;
+            return background.gameObject.AddComponent<BarButton>();
+        }
+
+        /// <summary>ボタンの中央に置く三角（正方形に保つ。スプライトは OperationBarView が入れる）。</summary>
+        private static Image CreateGlyph(string name, Transform parent)
+        {
+            return CreateSquareImage(name, parent, new Vector2(GlyphInset, GlyphInset), new Vector2(1f - GlyphInset, 1f - GlyphInset), Color.white);
+        }
+
+        /// <summary>枠（min〜max）の中に収まる最大の正方形の Image を作る（枠の縦横比に関係なく正方形。AspectRatioFitter は親の矩形に合わせるので、枠を親にする）。</summary>
+        private static Image CreateSquareImage(string name, Transform parent, Vector2 min, Vector2 max, Color color)
+        {
+            var slot = CreateRect(name + "Slot", parent, min, max);
+            var rect = CreateRect(name, slot, Vector2.zero, Vector2.one);
+            var fitter = rect.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 1f;
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
         }
 
         private static Color UnitColor(UnitRole role)

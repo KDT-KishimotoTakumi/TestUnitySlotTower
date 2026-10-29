@@ -6,7 +6,7 @@ namespace UnitySlotTower.Runtime
         public const int ReferenceWidth = 1920;
         public const int ReferenceHeight = 1080;
         public const float BattleWidthFraction = 0.6f;
-        public const float OperationBarHeightFraction = 0.1f;
+        public const float OperationBarHeightFraction = 0.14f;
         public const float BattleCameraPitchDegrees = 55f;
         public const int DefaultWindowWidth = 1280;
         public const int DefaultWindowHeight = 720;
