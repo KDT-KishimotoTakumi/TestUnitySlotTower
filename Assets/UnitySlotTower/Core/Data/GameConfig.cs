@@ -9,7 +9,10 @@ namespace UnitySlotTower.Core.Data
         private const string KeyColumn = "key";
         private const string ValueColumn = "value";
 
+        /// <summary>キャラクターコイン（召喚・強化の資金）の初期値。</summary>
         public int InitialCoins { get; }
+        /// <summary>スロットコイン（スロットを回す資金）の初期値（002 FR-101）。</summary>
+        public int InitialSlotCoins { get; }
         public int Bet { get; }
         public int StartingLife { get; }
         public int LifeBonusPerLife { get; }
@@ -18,10 +21,11 @@ namespace UnitySlotTower.Core.Data
         /// <summary>バッファーの範囲内の味方にかかる攻撃力の倍率（1 以上。重ねがけはしない）。</summary>
         public float BufferAtkMultiplier { get; }
 
-        private GameConfig(int initialCoins, int bet, int startingLife, int lifeBonusPerLife, int maxDeployed, float refundRate,
+        private GameConfig(int initialCoins, int initialSlotCoins, int bet, int startingLife, int lifeBonusPerLife, int maxDeployed, float refundRate,
             float bufferAtkMultiplier)
         {
             InitialCoins = initialCoins;
+            InitialSlotCoins = initialSlotCoins;
             Bet = bet;
             StartingLife = startingLife;
             LifeBonusPerLife = lifeBonusPerLife;
@@ -60,7 +64,7 @@ namespace UnitySlotTower.Core.Data
                 throw bufferRow.Error(ValueColumn, $"buffer_atk_multiplier は 1 以上にしてください: {buffer}");
 
             return new GameConfig(
-                Int("initial_coins", 0), Int("bet", 1), Int("starting_life", 1),
+                Int("initial_coins", 0), Int("initial_slot_coins", 0), Int("bet", 1), Int("starting_life", 1),
                 Int("life_bonus_per_life", 0), Int("max_deployed", 1), refund, buffer);
         }
     }

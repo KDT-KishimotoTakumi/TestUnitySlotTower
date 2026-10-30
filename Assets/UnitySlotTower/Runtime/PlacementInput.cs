@@ -21,6 +21,8 @@ namespace UnitySlotTower.Runtime
         public const string ConfirmPath = "Game/Confirm";
         public const string CursorMovePath = "Game/CursorMove";
         public const string PausePath = "Game/Pause";
+        public const string RetreatPath = "Game/Retreat";
+        public const string CycleSelectionPath = "Game/CycleSelection";
         public const string SummonSelectPrefix = "Game/SummonSelect";
         private const int MaxIcons = 5;
         private const float AxisThreshold = 0.5f;
@@ -36,10 +38,15 @@ namespace UnitySlotTower.Runtime
         [SerializeField] private PlacementMarkerView markers;
         [SerializeField] private SummonIcon[] icons = Array.Empty<SummonIcon>();
         [SerializeField] private TMP_Text deployedText;
+        [SerializeField] private RetreatView retreatView;
 
         private readonly InputAction[] summonActions = new InputAction[MaxIcons];
 
+        private readonly UnitSelection selection = new UnitSelection();
+
         private Action<int> iconPressed;
+        private Action<int> upgradePressed;
+        private Action retreatPressed;
         private PlacementController controller;
         private PlacementBoard boundBoard;
         private InputAction pointAction;
@@ -48,9 +55,13 @@ namespace UnitySlotTower.Runtime
         private InputAction confirmAction;
         private InputAction cursorMoveAction;
         private InputAction pauseAction;
+        private InputAction retreatAction;
+        private InputAction cycleAction;
         private Vector2 lastPointer;
         private Vector2 lastMove;
         private bool previewShown;
+        private bool selectionRangeShown;
+        private bool clickArmed;
         private float lastPlacementConfirmTime = float.NegativeInfinity;
         private int shownDeployed = -1;
 
@@ -66,6 +77,13 @@ namespace UnitySlotTower.Runtime
         private void Awake()
         {
             iconPressed = OnIconPressed;
+            upgradePressed = OnUpgradePressed;
+            retreatPressed = RetreatSelected;
+            if (retreatView != null)
+            {
+                retreatView.Bind(retreatPressed);
+                retreatView.Hide();
+            }
         }
 
         private void OnEnable()
@@ -81,13 +99,18 @@ namespace UnitySlotTower.Runtime
             confirmAction = Find(ConfirmPath);
             cursorMoveAction = Find(CursorMovePath);
             pauseAction = Find(PausePath);
+            retreatAction = Find(RetreatPath);
+            cycleAction = Find(CycleSelectionPath);
             for (var i = 0; i < MaxIcons; i++) summonActions[i] = Find(SummonSelectPrefix + (i + 1));
         }
 
         private void OnDisable()
         {
-            // 無効化されたときに、途中の配置操作・印・範囲の表示を残さない
+            // 無効化されたときに、途中の配置操作・印・範囲の表示、味方の選択を残さない
             AbortPlacement();
+            ClearSelection();
+            Disable(retreatAction);
+            Disable(cycleAction);
             Disable(pointAction);
             Disable(pressAction);
             Disable(cancelAction);
@@ -155,6 +178,7 @@ namespace UnitySlotTower.Runtime
                 return;
             }
             PollMouse();
+            SyncSelection();
             RefreshPlacementView();
             RefreshIcons();
         }
@@ -170,6 +194,8 @@ namespace UnitySlotTower.Runtime
                 AbortPlacement();
                 RefreshPlacementView();
             }
+            // 停止中は味方の選択もできない（撤退ボタンも出さない。閲覧は T308 第 3 段階）
+            ClearSelection();
             // マウスの移動量は読み捨てる（再開直後に古い差分で向きが動かないように）
             lastPointer = pointAction.ReadValue<Vector2>();
             lastMove = cursorMoveAction.ReadValue<Vector2>();
@@ -183,9 +209,13 @@ namespace UnitySlotTower.Runtime
 
             // 次のウェーブで盤面が変わったときは、配置操作を捨てて新しい盤面の操作に作り直す（印とアイコンは作り直さない）
             var rebinding = controller != null;
-            if (rebinding) AbortPlacement();
+            if (rebinding)
+            {
+                AbortPlacement();
+                ClearSelection();
+            }
             boundBoard = runner.Board;
-            controller = new PlacementController(runner.Units, runner.Summoner, runner.Board, runner.Wallet);
+            controller = new PlacementController(runner.Units, runner.Summoner, runner.Board, runner.Wallet, runner.Flow);
             if (rebinding) return true;
             markers.Bind(field);
             var units = runner.Units.Units;
@@ -193,7 +223,7 @@ namespace UnitySlotTower.Runtime
             {
                 var present = i < units.Count && i < MaxIcons;
                 icons[i].gameObject.SetActive(present);
-                if (present) icons[i].Bind(i, units[i].Cost, iconPressed);
+                if (present) icons[i].Bind(i, units[i].Cost, iconPressed, upgradePressed);
             }
             return true;
         }
@@ -204,6 +234,95 @@ namespace UnitySlotTower.Runtime
             controller.SelectByIcon(index);
         }
 
+        private void OnUpgradePressed(int index)
+        {
+            if (runner == null || runner.Upgrades == null) return;
+            TryUpgrade(index);
+        }
+
+        /// <summary>種類 index（アイコンの番号）を強化する。コイン不足・停止中ならカードを赤く光らせる（ボタンと Shift+数字で共通）。</summary>
+        private void TryUpgrade(int index)
+        {
+            var units = runner.Units.Units;
+            if (index < 0 || index >= units.Count) return;
+            var result = runner.Upgrades.TryUpgrade(units[index].Id);
+            if ((result == UpgradeResult.NotEnoughCoins || result == UpgradeResult.Paused) && index < icons.Length)
+                icons[index].FlashFailure();
+        }
+
+        // ---- 味方の選択と撤退（T308） ----
+
+        /// <summary>選択を外し、撤退ボタンと攻撃範囲の強調を消す。</summary>
+        private void ClearSelection()
+        {
+            selection.Clear();
+            HideSelection();
+        }
+
+        private void HideSelection()
+        {
+            if (retreatView != null) retreatView.Hide();
+            if (selectionRangeShown && runner != null)
+            {
+                runner.ClearRange();
+                selectionRangeShown = false;
+            }
+        }
+
+        /// <summary>選択が変わったとき、選択した味方の攻撃範囲を出す（外れたなら消す）。撤退ボタンは SyncSelection が毎フレーム置く。</summary>
+        private void ApplySelectionChange()
+        {
+            if (selection.HasSelection)
+            {
+                runner.ShowRange(selection.Selected);
+                selectionRangeShown = true;
+            }
+            else
+            {
+                HideSelection();
+            }
+        }
+
+        /// <summary>
+        /// 選択の後始末と撤退ボタンの位置合わせ（毎フレーム）。配置操作が始まったら選択を外し、
+        /// 選択中の味方が倒れた・撤退した・盤面が替わったときも外す。
+        /// </summary>
+        private void SyncSelection()
+        {
+            if (!selection.HasSelection) return;
+            if (controller.IsActive) selection.Clear();
+            else selection.Validate(runner.Board);
+            if (!selection.HasSelection)
+            {
+                HideSelection();
+                return;
+            }
+            if (retreatView == null) return;
+            var unit = selection.Selected;
+            var world = field.transform.TransformPoint(field.Geometry.ToLocal(unit.Cell, field.SurfaceHeight(unit.Cell)));
+            retreatView.Show(battleCamera.WorldToScreenPoint(world), runner.Simulation.RefundFor(unit));
+        }
+
+        /// <summary>選択中の味方を撤退させる（× ボタンと X キー）。成功すると選択を外す。停止中は拒否される。</summary>
+        private void RetreatSelected()
+        {
+            if (runner == null || runner.Simulation == null || !selection.HasSelection) return;
+            if (!runner.Simulation.TryRetreat(selection.Selected, out _)) return;
+            ClearSelection();
+        }
+
+        private void ClickField(Vector2 pointer)
+        {
+            var changed = false;
+            if (TryPick(pointer, out var cell)) changed = selection.ClickCell(runner.Board, cell);
+            else if (selection.HasSelection)
+            {
+                selection.Clear();
+                changed = true;
+            }
+            if (changed) ApplySelectionChange();
+        }
+
         private void PollKeyboard()
         {
             var shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
@@ -212,9 +331,13 @@ namespace UnitySlotTower.Runtime
             {
                 if (!summonActions[i].WasPressedThisFrame()) continue;
                 // Shift+数字は強化（T303）。召喚の選択は Shift 中は無視される
-                if (shift && i < units.Count) runner.Upgrades.TryUpgrade(units[i].Id);
+                if (shift && i < units.Count) TryUpgrade(i);
                 controller.SelectByKey(i, shift);
             }
+
+            // Tab で配置中の味方を順に選び、X で撤退（配置操作中は選べない。選択が変わると攻撃範囲を出す）
+            if (cycleAction.WasPressedThisFrame() && !controller.IsActive && selection.Cycle(runner.Board)) ApplySelectionChange();
+            if (retreatAction.WasPressedThisFrame()) RetreatSelected();
 
             // 矢印は押した瞬間に 1 マス（押しっぱなしでは進まない）。上は y が減る向き
             var move = cursorMoveAction.ReadValue<Vector2>();
@@ -237,10 +360,13 @@ namespace UnitySlotTower.Runtime
                     runner.StartWave();
                 }
             }
-            // Esc は Cancel と Pause の両方に割り当て済み。配置操作中の Esc は取り消しを優先し、待機中のときだけ一時停止する。
-            // P は Cancel に割り当てがないので、配置操作中でも一時停止できる（途中の操作は PollPaused で取りやめる）
-            var cancelled = cancelAction.WasPressedThisFrame() && controller.Cancel();
-            if (pauseAction.WasPressedThisFrame() && !cancelled) runner.TogglePause();
+            // Esc は Cancel と Pause の両方に割り当て済み。優先順は 配置操作の取り消し → 味方の選択解除 → 一時停止。
+            // P は Cancel に割り当てがないので、配置操作中でも選択中でも一時停止できる（途中の操作・選択は PollPaused で取りやめる）
+            var cancelPressed = cancelAction.WasPressedThisFrame();
+            var cancelled = cancelPressed && controller.Cancel();
+            var deselected = cancelPressed && !cancelled && selection.HasSelection;
+            if (deselected) ClearSelection();
+            if (pauseAction.WasPressedThisFrame() && !cancelled && !deselected) runner.TogglePause();
         }
 
         private static int Edge(float now, float before)
@@ -255,7 +381,9 @@ namespace UnitySlotTower.Runtime
             var pointer = pointAction.ReadValue<Vector2>();
             var moved = pointer != lastPointer;
             lastPointer = pointer;
-            var overField = battleCamera.pixelRect.Contains(pointer);
+            // 撤退ボタンの上は戦闘領域のクリックとして扱わない（ボタン自身が uGUI で受ける）
+            var overField = battleCamera.pixelRect.Contains(pointer) && (retreatView == null || !retreatView.Contains(pointer));
+            var idleBefore = !controller.IsActive;
 
             if (moved || controller.Dragging)
             {
@@ -271,8 +399,18 @@ namespace UnitySlotTower.Runtime
                 }
             }
 
-            if (pressAction.WasPressedThisFrame()) controller.PointerPressed(overField);
-            if (pressAction.WasReleasedThisFrame()) controller.PointerReleased(overField);
+            // 配置操作中でないときに、押したのも離したのも戦闘領域上なら、そのマスの味方を選ぶ（空きマスなら選択解除）
+            if (pressAction.WasPressedThisFrame())
+            {
+                clickArmed = idleBefore && overField;
+                controller.PointerPressed(overField);
+            }
+            if (pressAction.WasReleasedThisFrame())
+            {
+                controller.PointerReleased(overField);
+                if (clickArmed && idleBefore && overField) ClickField(pointer);
+                clickArmed = false;
+            }
         }
 
         private bool TryPick(Vector2 screen, out GridPoint cell)
@@ -335,7 +473,10 @@ namespace UnitySlotTower.Runtime
                     ? runner.Summoner.CooldownRemaining(unit.Id) / unit.Cooldown
                     : 0f;
                 var stock = runner.Flow != null ? runner.Flow.GetStock(unit.Id) : 0;
-                icons[i].Refresh(availability, ratio, selected != null && ReferenceEquals(selected, unit), stock, runner.Upgrades.GetLevel(unit.Id));
+                var upgradeCost = runner.Upgrades.GetNextCost(unit.Id);
+                var upgradeAffordable = upgradeCost >= 0 && !runner.IsPaused && runner.Wallet.CanAfford(upgradeCost);
+                icons[i].Refresh(availability, ratio, selected != null && ReferenceEquals(selected, unit), stock, runner.Upgrades.GetLevel(unit.Id),
+                    upgradeCost, upgradeAffordable);
             }
 
             var deployed = runner.Summoner.DeployedCount;

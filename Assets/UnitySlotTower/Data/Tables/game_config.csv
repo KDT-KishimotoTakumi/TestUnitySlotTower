@@ -1,5 +1,6 @@
 key,value
-initial_coins,30
+initial_coins,1000
+initial_slot_coins,500
 bet,3
 starting_life,10
 life_bonus_per_life,3

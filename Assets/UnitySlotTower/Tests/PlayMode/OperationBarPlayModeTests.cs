@@ -19,7 +19,7 @@ namespace UnitySlotTower.Tests
         private const string SceneName = "Game";
         private const int MaxStartupFrames = 30;
         private const int InitialLife = 10;
-        private const int InitialCoins = 30;
+        private const int InitialCoins = 1000;
 
         private Mouse mouse;
         private Keyboard keyboard;

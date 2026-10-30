@@ -54,6 +54,7 @@ namespace UnitySlotTower.Core.Units
         private readonly UnitSummoner summoner;
         private readonly PlacementBoard board;
         private readonly Wallet wallet;
+        private readonly IUnitStock stock;
 
         private bool hasCandidate;
         private bool pressedInFacing;
@@ -70,8 +71,10 @@ namespace UnitySlotTower.Core.Units
         public SummonResult LastSelectResult { get; private set; }
         public PlacedUnit LastPlaced { get; private set; }
 
-        public PlacementController(UnitTable table, UnitSummoner summoner, PlacementBoard board, Wallet wallet)
+        /// <param name="stock">無料ストックの窓口（T308）。省略するとストックなし。ストックが 1 以上の種類は、コインを使わずストックで置く。</param>
+        public PlacementController(UnitTable table, UnitSummoner summoner, PlacementBoard board, Wallet wallet, IUnitStock stock = null)
         {
+            this.stock = stock;
             this.table = table ?? throw new ArgumentNullException(nameof(table));
             this.summoner = summoner ?? throw new ArgumentNullException(nameof(summoner));
             this.board = board ?? throw new ArgumentNullException(nameof(board));
@@ -90,16 +93,19 @@ namespace UnitySlotTower.Core.Units
 
         /// <summary>
         /// 今この種類を召喚できるか。<see cref="UnitSummoner"/> の判定順（一時停止 → 配置上限 → 待ち時間 → コイン）を、状態を変えずに見る。
-        /// 召喚できるなら Success。
+        /// 召喚できるなら Success。ストックがあれば待ち時間もコインも見ない（ストック配置は待ち時間を始めず、コインも使わない）。
         /// </summary>
         public SummonResult Availability(UnitDef unit)
         {
             if (summoner.IsPaused) return SummonResult.Paused;
             if (summoner.DeployedCount >= summoner.MaxDeployed) return SummonResult.DeployLimit;
+            if (HasStock(unit)) return SummonResult.Success;
             if (!summoner.IgnoreCooldown && summoner.CooldownRemaining(unit.Id) > 0f) return SummonResult.Cooldown;
             if (!wallet.CanAfford(unit.Cost)) return SummonResult.NotEnoughCoins;
             return SummonResult.Success;
         }
+
+        private bool HasStock(UnitDef unit) => stock != null && stock.GetStock(unit.Id) > 0;
 
         // ---- 種類の選択 ----
 
@@ -259,7 +265,11 @@ namespace UnitySlotTower.Core.Units
         {
             if (Phase != PlacementPhase.Facing) return PlacementStep.NoChange;
             var cell = Candidate;
-            var result = summoner.TrySummon(SelectedUnit.Id, board, cell, Facing, out var placed);
+            // ストックがあれば先にそれを使う（コインは減らない）。尽きていれば通常のコイン召喚
+            PlacedUnit placed;
+            var result = HasStock(SelectedUnit)
+                ? stock.TrySummonFromStock(SelectedUnit.Id, board, cell, Facing, out placed)
+                : summoner.TrySummon(SelectedUnit.Id, board, cell, Facing, out placed);
             LastSummonResult = result;
             if (result == SummonResult.Success)
             {

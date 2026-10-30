@@ -19,7 +19,7 @@ namespace UnitySlotTower.Tests
     {
         private const string SceneName = "Game";
         private const int TankCost = 15;
-        private const int InitialCoins = 30;
+        private const int InitialCoins = 1000;
         private const float FacingDragPixels = 60f;
         private const int MaxStartupFrames = 30;
 

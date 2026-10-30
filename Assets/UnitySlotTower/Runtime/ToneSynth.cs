@@ -9,6 +9,10 @@ namespace UnitySlotTower.Runtime
         private const int SampleRate = 44100;
         private const float Amplitude = 0.35f;
         private const float OvertoneGain = 0.35f;
+        private const float NoteDecay = 3f;
+        private const float BassDecay = 0.6f;
+        private const float BassGain = 0.7f;
+        private const float FadeSeconds = 0.01f;
 
         /// <summary>
         /// 周波数が途中で firstHz から secondHz に切り替わる、減衰する音。
@@ -63,6 +67,46 @@ namespace UnitySlotTower.Runtime
             var clip = AudioClip.Create(name, count, 1, SampleRate, false);
             clip.SetData(samples, 0);
             return clip;
+        }
+
+        /// <summary>
+        /// ループ再生用の簡易 BGM。notes を noteSeconds ごとに 1 音ずつ鳴らし（倍音つき、減衰）、
+        /// bass を bassSeconds ごとに低音で重ねる。各音は自分の枠の終わりで必ず 0 に戻るので、継ぎ目でプチ音が出ない。
+        /// </summary>
+        public static AudioClip CreateLoop(string name, float[] notes, float noteSeconds, float[] bass, float bassSeconds, float amplitude)
+        {
+            var count = Mathf.Max(1, (int)(notes.Length * noteSeconds * SampleRate));
+            var samples = new float[count];
+            AddVoices(samples, notes, noteSeconds, NoteDecay, 1f);
+            AddVoices(samples, bass, bassSeconds, BassDecay, BassGain);
+            var peak = 0f;
+            for (var i = 0; i < count; i++) peak = Mathf.Max(peak, Mathf.Abs(samples[i]));
+            var scale = peak > 0f ? amplitude / peak : 0f;
+            for (var i = 0; i < count; i++) samples[i] *= scale;
+            var clip = AudioClip.Create(name, count, 1, SampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        private static void AddVoices(float[] samples, float[] hzs, float voiceSeconds, float decay, float gain)
+        {
+            var length = (int)(voiceSeconds * SampleRate);
+            var fade = Mathf.Min(length, (int)(FadeSeconds * SampleRate));
+            for (var voice = 0; voice < hzs.Length; voice++)
+            {
+                var start = (int)(voice * voiceSeconds * SampleRate);
+                for (var i = 0; i < length && start + i < samples.Length; i++)
+                {
+                    var local = (float)i / SampleRate;
+                    var angle = 2.0 * Math.PI * hzs[voice] * local;
+                    var wave = Math.Sin(angle) + OvertoneGain * Math.Sin(angle * 2.0);
+                    var envelope = Math.Exp(-decay * local);
+                    // 立ち上がりと終わりを短くなだらかにして、音の継ぎ目と一周の継ぎ目の雑音を消す
+                    if (i < fade) envelope *= (double)i / fade;
+                    if (length - i <= fade) envelope *= (double)(length - i) / fade;
+                    samples[start + i] += (float)(wave * envelope * gain);
+                }
+            }
         }
     }
 }

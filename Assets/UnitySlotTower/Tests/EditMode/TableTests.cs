@@ -28,7 +28,8 @@ namespace UnitySlotTower.Tests
         public void GameConfig_ReadsInitialValues()
         {
             var config = TableSet.Load(ReadFile).GameConfig;
-            Assert.AreEqual(30, config.InitialCoins);
+            Assert.AreEqual(1000, config.InitialCoins);
+            Assert.AreEqual(500, config.InitialSlotCoins);
             Assert.AreEqual(3, config.Bet);
             Assert.AreEqual(10, config.StartingLife);
             Assert.AreEqual(8, config.MaxDeployed);

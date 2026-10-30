@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-29 Asia/Tokyo / 状態: M0・M1 完了、M2 の T201〜T209 完了、M3 は T302・T303 完了（最新コミット `91a655b`）。EditMode 303 件・PlayMode 11 件・ハーネス 8 件成功。次は T304
+更新: 2026-10-31 Asia/Tokyo / 状態: M0〜M2 完了、M3 は T301〜T308（stage 2 まで）と T306・T307 実装済み（tasks.md のチェックは未反映の箇所あり。ソースとコミットが正）。002（コイン2種類化・BGM）実装済み。EditMode 375 件・PlayMode 41 件・ハーネス 8 件成功
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -36,7 +36,10 @@
 - 画面（2026-10-29 に縦長から横長へ変更済み）: 起動時はボーダーレス全画面（`GameSceneBuilder.ApplyPlayerSettings` が `FullScreenWindow`、Alt+Enter で切替、ウィンドウ時は 1280×720）。16:9 の `PlayArea` が画面に収まり、16:9 以外では上下か左右に黒帯。戦闘カメラ距離は 15 固定（領域の縦横比に追従しない）。16:10 など他の画面比の見た目は未確認。スロット筐体は割合配置のまま縦長に引き伸ばされている（違和感があれば `GameSceneBuilder` の筐体の割合定数を調整）。`BattleViewport` は毎フレーム Viewport Rect を計算し直すのでリサイズに追従する設計。Editor で Play 中に Game ビューをリサイズするとレイアウトが戻らない（Editor 側の挙動と推測、Play を新規開始すれば正常）。実ビルドでの全画面・Alt+Enter 切替は未確認（`Build-UnityPlayer.ps1` で実ビルドして確認）。Esc は配置キャンセル/Pause 用なので終了には使わない（終了 UI は仕様に無い）。向きの決め方（ドロップ後にもう一度ドラッグ）と感度（不感帯3%）はユーザーが現状でよいと判断済み（2026-10-29）。
 - T302（撤退）: `BattleSimulation.TryRetreat(unit, out refund)`（`RemoveUnit` 経由、`floor(cost × refund_rate)` を財布へ。ストック由来も同式）。ctor 末尾の `refundRate`（省略=0）。**撤退の操作 UI は未実装**（`BattleRunner.Simulation.TryRetreat` を呼ぶだけで良い。FR-002 で マウス・キーボード両対応が必要）。
 - T303（強化）: `Core/Units/UnitUpgradeTable`（level 2〜5 連続、倍率 1 以上、`unit_upgrades.csv` は仮値）、`UnitUpgrades(table, wallet, board)`（`TryUpgrade/GetLevel/GetNextCost`、`board.UnitPlaced` を購読して新規個体にも反映）、`PlacedUnit.MaxHp/BaseAtk/Defense/Level`（味方のステータスは必ずこれを読む。`Def.*` は基準値）。`BattleRunner.Upgrades`、Shift+数字で強化（`PlacementInput.PollKeyboard`）。**未実装: 強化のマウス操作（ボタン）と、段階・費用・失敗の表示、一時停止中の拒否（T307）**。T304 でウェーブをまたぐときは `UnitUpgrades` の段階を引き継ぐ（盤面を差し替えるなら購読の付け替えが要る）。
-- 次の一手: T304（ウェーブ進行・準備フェーズ・▶で開始・ライフボーナス・ストック化・ライフ回復・ストックからの無料配置・準備中は待ち時間なし。`UnitSummoner.IgnoreCooldown`、`PlayerLife.Restore*` が用意済み。`PlacementController.Cancel()` が false のとき Pause は T307）。その後 T301 の残り（戦闘中にスロットを回せる PlayMode テスト、AC-011）、強化・撤退の操作 UI、T305〜T307。プレイヤーによる T208 手動確認（操作感・向き・不感帯）は未実施。
+- 002（コイン2種類化・BGM、[`specs/002-dual-coin-and-bgm/`](../../specs/002-dual-coin-and-bgm/spec.md)）: キャラクターコイン=従来の `Wallet`（初期1000、召喚・強化・撤退の返還・スロットの払い出し）、スロットコイン=`slotWallet`（初期500、掛け金・敵のドロップ・ライフボーナス）。`SlotMachine`/`BattleSimulation`/`WaveFlow` の末尾引数 `slotWallet` は省略すると1つの財布（テスト用）。`SlotCabinetView.SlotWallet` / `BattleRunner.SlotWallet` が本番の共有財布。BGM は `Runtime/BgmPlayer`（操作バーに付く、コード生成ループ、音量0〜5、スピーカークリックと `=`/`-` キー）。未確認: BGM の聴感、経済バランス（T309）。
+- スロットのキー操作は Space のみ（回転していなければレバー、回転中は左から順に停止。J/K/L は廃止、停止ボタンのクリックは残る）。T308 stage 2（強化▲・撤退×・ストック・選択）も実装・テスト済み。
+- 自動ビルドは日本語を含むパス（`ドキュメント`）では Managed Stripping が失敗する（UnityLinker）。ASCII パス `C:\Temp\SlotTowerStrip` にコピーして batchmode でビルドすると High で 168.6MB → 136.5MB（ストリップ後の手動動作確認済み）。標準手順には未反映（設定は元のまま）。
+- 次の一手: T304〜T307 のチェックと検証結果を tasks.md に反映、T308 stage 3（段階・費用・失敗の表示、一時停止中の閲覧）、T309（通し手動プレイで経済・難易度を調整。コイン分離後の初期値 1000/500・掛け金3は仮）、M4（Title・難易度選択・リザルト）。BGM の聴感確認。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）

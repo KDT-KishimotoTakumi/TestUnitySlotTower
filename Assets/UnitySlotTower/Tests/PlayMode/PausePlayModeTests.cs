@@ -78,16 +78,19 @@ namespace UnitySlotTower.Tests
         }
 
         [UnityTest]
-        public IEnumerator SlotOperation_DoesNotStopEnemies_AndSharesWalletWithBattle()
+        public IEnumerator SlotOperation_DoesNotStopEnemies_AndSharesWalletsWithBattle()
         {
             yield return LoadGame();
-            Assert.AreSame(cabinet.Wallet, runner.Wallet, "戦闘とスロットは同じ財布");
+            Assert.AreSame(cabinet.Wallet, runner.Wallet, "戦闘とスロットはキャラクターコインの財布を共有する");
+            Assert.AreSame(cabinet.SlotWallet, runner.SlotWallet, "戦闘とスロットはスロットコインの財布を共有する");
             var enemy = WaitForEnemy();
 
-            var coins = runner.Wallet.Coins;
+            var coins = runner.SlotWallet.Coins;
+            var characterCoins = runner.Wallet.Coins;
             cabinet.HandleLever();
             Assert.AreEqual(SlotPhase.Spinning, cabinet.Machine.Phase, "レバーでリールが回り始める");
-            Assert.AreEqual(coins - Bet, runner.Wallet.Coins, "掛け金は戦闘側から見える財布から引かれる");
+            Assert.AreEqual(coins - Bet, runner.SlotWallet.Coins, "掛け金は戦闘側から見えるスロットコインから引かれる");
+            Assert.AreEqual(characterCoins, runner.Wallet.Coins, "キャラクターコインは掛け金では減らない");
 
             var progress = enemy.Progress;
             runner.FastForward(AdvanceSeconds);
@@ -95,11 +98,12 @@ namespace UnitySlotTower.Tests
             Assert.AreEqual(SlotPhase.Spinning, cabinet.Machine.Phase, "スロットは回転中のまま");
             Assert.Greater(enemy.Progress, progress, "スロット操作中も敵は進む");
 
-            // 召喚のコインもスロットと同じ財布から引かれる
+            // 召喚のコインはキャラクターコインから引かれ、スロットコインは動かない
             var before = runner.Wallet.Coins;
             Assert.AreEqual(SummonResult.Success, runner.Summoner.TrySummon(Swordsman, runner.Board, GroundCell, Facing.Right, out _));
             Assert.Less(runner.Wallet.Coins, before);
             Assert.AreEqual(runner.Wallet.Coins, cabinet.Wallet.Coins);
+            Assert.AreEqual(coins - Bet, runner.SlotWallet.Coins);
         }
 
         [UnityTest]

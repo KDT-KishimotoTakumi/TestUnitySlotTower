@@ -32,7 +32,9 @@ namespace UnitySlotTower.Core.Combat
         private readonly List<PlacedUnit> defeatedUnits = new List<PlacedUnit>();
         private readonly List<EnemyInstance> defeatedEnemies = new List<EnemyInstance>();
         private readonly PlayerLife life;
+        // wallet は撤退の返還（キャラクターコイン）、slotWallet はドロップの行き先（スロットコイン、省くと wallet。002 FR-104, FR-105）
         private readonly Wallet wallet;
+        private readonly Wallet slotWallet;
         private readonly EnemyDropRoller dropRoller;
         private readonly float refundRate;
         private readonly PauseState pause;
@@ -53,9 +55,10 @@ namespace UnitySlotTower.Core.Combat
         /// <param name="pause">一時停止の共有状態（FR-012）。省略すると止まらない。</param>
         public BattleSimulation(PlacementBoard board, EnemyField enemies, UnitSummoner summoner, UnitRangeTable ranges,
             float bufferMultiplier, PlayerLife life = null, Wallet wallet = null, GameRandom random = null, float refundRate = 0f,
-            PauseState pause = null)
+            PauseState pause = null, Wallet slotWallet = null)
         {
             this.pause = pause;
+            this.slotWallet = slotWallet;
             this.board = board ?? throw new ArgumentNullException(nameof(board));
             this.enemies = enemies ?? throw new ArgumentNullException(nameof(enemies));
             this.summoner = summoner ?? throw new ArgumentNullException(nameof(summoner));
@@ -112,10 +115,13 @@ namespace UnitySlotTower.Core.Combat
             refund = 0;
             if (IsPaused) return false;
             if (!RemoveUnit(unit)) return false;
-            refund = (int)Math.Floor(unit.Def.Cost * refundRate);
+            refund = RefundFor(unit);
             if (refund > 0) wallet.Add(refund);
             return true;
         }
+
+        /// <summary>unit を撤退させたときに戻るコイン（召喚コスト × 返還率の切り捨て）。撤退ボタンの表示にも使う。</summary>
+        public int RefundFor(PlacedUnit unit) => (int)Math.Floor(unit.Def.Cost * refundRate);
 
         /// <summary>全員の攻撃力倍率を 1 に戻し、バッファーの範囲内の味方に倍率をかける（重ねがけなし、いちばん高い倍率だけ）。</summary>
         public void RecomputeBuffs()
@@ -236,7 +242,7 @@ namespace UnitySlotTower.Core.Combat
                 if (dropRoller == null) continue;
                 var coins = dropRoller.Roll(enemy.Def);
                 if (coins <= 0) continue;
-                wallet.Add(coins);
+                (slotWallet ?? wallet).Add(coins);
                 DropGained?.Invoke(enemy, coins);
             }
         }

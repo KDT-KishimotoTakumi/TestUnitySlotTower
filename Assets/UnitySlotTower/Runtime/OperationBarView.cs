@@ -28,15 +28,11 @@ namespace UnitySlotTower.Runtime
         public static readonly Color GlyphOn = Color.white;
         public static readonly Color GlyphOff = new Color(0.45f, 0.45f, 0.45f);
 
-        private const int IconSize = 64;
-        private const int SuperSample = 3;
         private const float LifeBlinkSeconds = 0.8f;
         private const float LifeBlinkHz = 6f;
         private const float CoinFlashSeconds = 0.4f;
         private const int ButtonStateStart = 1;
         private const int ButtonStatePaused = 2;
-
-        private delegate bool Shape(float x, float y);
 
         [SerializeField] private BattleRunner runner;
         [SerializeField] private TMP_Text lifeText;
@@ -68,10 +64,10 @@ namespace UnitySlotTower.Runtime
 
         private void Awake()
         {
-            lifeIcon.sprite = CreateSprite(Heart);
-            coinIcon.sprite = CreateSprite(Coin);
-            flagIcon.sprite = CreateSprite(Flag);
-            var triangle = CreateSprite(Triangle);
+            lifeIcon.sprite = ShapeSprites.Create(Heart, owned);
+            coinIcon.sprite = ShapeSprites.Create(Coin, owned);
+            flagIcon.sprite = ShapeSprites.Create(Flag, owned);
+            var triangle = ShapeSprites.Create(Triangle, owned);
             startGlyph.sprite = triangle;
             resumeGlyph.sprite = triangle;
             lifeIcon.color = LifeHeart;
@@ -194,53 +190,9 @@ namespace UnitySlotTower.Runtime
         private static bool Flag(float x, float y)
         {
             if (x >= -0.75f && x <= -0.55f && y >= -1f && y <= 1f) return true;
-            return InTriangle(x, y, -0.55f, 0.95f, 0.85f, 0.45f, -0.55f, -0.05f);
+            return ShapeSprites.InTriangle(x, y, -0.55f, 0.95f, 0.85f, 0.45f, -0.55f, -0.05f);
         }
 
-        private static bool Triangle(float x, float y) => InTriangle(x, y, -0.55f, -0.8f, -0.55f, 0.8f, 0.85f, 0f);
-
-        private static bool InTriangle(float px, float py, float ax, float ay, float bx, float by, float cx, float cy)
-        {
-            var d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by);
-            var d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
-            var d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
-            var hasNegative = d1 < 0f || d2 < 0f || d3 < 0f;
-            var hasPositive = d1 > 0f || d2 > 0f || d3 > 0f;
-            return !(hasNegative && hasPositive);
-        }
-
-        /// <summary>白地のアルファだけの単色スプライトを作る（Image.color で色を付ける）。縁は 3×3 のサンプリングで滑らかにする。</summary>
-        private Sprite CreateSprite(Shape shape)
-        {
-            var texture = new Texture2D(IconSize, IconSize, TextureFormat.RGBA32, false)
-            {
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-            };
-            var pixels = new Color32[IconSize * IconSize];
-            for (var py = 0; py < IconSize; py++)
-            {
-                for (var px = 0; px < IconSize; px++)
-                {
-                    var covered = 0;
-                    for (var sy = 0; sy < SuperSample; sy++)
-                    {
-                        for (var sx = 0; sx < SuperSample; sx++)
-                        {
-                            var u = (px + (sx + 0.5f) / SuperSample) / IconSize * 2f - 1f;
-                            var v = (py + (sy + 0.5f) / SuperSample) / IconSize * 2f - 1f;
-                            if (shape(u, v)) covered++;
-                        }
-                    }
-                    pixels[py * IconSize + px] = new Color32(255, 255, 255, (byte)(255 * covered / (SuperSample * SuperSample)));
-                }
-            }
-            texture.SetPixels32(pixels);
-            texture.Apply(false, true);
-            var sprite = Sprite.Create(texture, new Rect(0f, 0f, IconSize, IconSize), new Vector2(0.5f, 0.5f), IconSize);
-            owned.Add(texture);
-            owned.Add(sprite);
-            return sprite;
-        }
+        private static bool Triangle(float x, float y) => ShapeSprites.InTriangle(x, y, -0.55f, -0.8f, -0.55f, 0.8f, 0.85f, 0f);
     }
 }

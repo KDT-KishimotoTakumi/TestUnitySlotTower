@@ -76,7 +76,10 @@ namespace UnitySlotTower.Runtime
         public UnitSummoner Summoner { get; private set; }
         public UnitUpgrades Upgrades { get; private set; }
         public PlayerLife Life { get; private set; }
+        /// <summary>キャラクターコイン（召喚・強化・撤退の返還。スロットの払い出しが入る）。</summary>
         public Wallet Wallet { get; private set; }
+        /// <summary>スロットコイン（スロットの掛け金。敵のドロップとライフボーナスが入る）。</summary>
+        public Wallet SlotWallet { get; private set; }
         /// <summary>ウェーブ進行（準備・戦闘・無料ストック）。Start 前は null。</summary>
         public WaveFlow Flow { get; private set; }
         /// <summary>一時停止の共有状態（筐体と同じもの）。Start 前は null。</summary>
@@ -123,11 +126,12 @@ namespace UnitySlotTower.Runtime
             if (cabinet != null && cabinet.Wallet == null)
                 Debug.LogWarning("BattleRunner: 筐体の Wallet がまだありません。別の財布を使います（スロットとコインが共有されません）", this);
             Wallet = cabinet != null && cabinet.Wallet != null ? cabinet.Wallet : new Wallet(config.InitialCoins);
+            SlotWallet = cabinet != null && cabinet.SlotWallet != null ? cabinet.SlotWallet : new Wallet(config.InitialSlotCoins);
             // 一時停止は筐体と共有する（戦闘とスロットが同時に止まる）。筐体がなければ戦闘だけの状態
             Pause = cabinet != null && cabinet.Pause != null ? cabinet.Pause : new PauseState();
             Summoner = new UnitSummoner(unitTable, Wallet, config.MaxDeployed, Pause);
             Life = new PlayerLife(config.StartingLife);
-            Flow = new WaveFlow(Summoner, Life, Wallet, config.LifeBonusPerLife, pause: Pause);
+            Flow = new WaveFlow(Summoner, Life, Wallet, config.LifeBonusPerLife, pause: Pause, slotWallet: SlotWallet);
             Flow.WaveCleared += waveClearedAction;
             BuildBattle(wave, map);
 
@@ -148,7 +152,7 @@ namespace UnitySlotTower.Runtime
             if (first) Upgrades = new UnitUpgrades(tables.UnitUpgrades, Wallet, Board, Pause);
             else Upgrades.Rebind(Board);
             Simulation = new BattleSimulation(Board, Enemies, Summoner, tables.UnitRanges, config.BufferAtkMultiplier,
-                Life, Wallet, dropRandom, config.RefundRate, Pause);
+                Life, Wallet, dropRandom, config.RefundRate, Pause, SlotWallet);
             if (first) view.Bind(field, Board, Enemies, tables.UnitRanges, Life, config.MaxDeployed);
             else view.Rebind(Board, Enemies);
             Flow.Prepare(waveNumber, Board, Enemies, schedule, Simulation);

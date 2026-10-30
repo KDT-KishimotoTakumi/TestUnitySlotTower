@@ -45,8 +45,8 @@ namespace UnitySlotTower.Core.Data
             var enemies = tables.Enemies;
             var waves = tables.Waves;
             var config = tables.GameConfig;
-            if (config.Bet > config.InitialCoins && config.InitialCoins > 0)
-                throw new CsvException(TableSet.GameConfigFile, 0, "value", "掛け金が初期コインを超えています");
+            if (config.Bet > config.InitialSlotCoins && config.InitialSlotCoins > 0)
+                throw new CsvException(TableSet.GameConfigFile, 0, "value", "掛け金が初期スロットコインを超えています");
         }
 
         private static bool Contains(IReadOnlyList<string> header, string column)

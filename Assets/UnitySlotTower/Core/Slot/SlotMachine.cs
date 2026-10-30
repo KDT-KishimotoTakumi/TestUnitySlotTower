@@ -81,7 +81,9 @@ namespace UnitySlotTower.Core.Slot
         private readonly SlotPremonitionTable premonitions;
         private readonly SlotReelController controller;
         private readonly SlotReels reels;
+        // 払い出しの入る財布（キャラクターコイン）と、掛け金を払う財布（スロットコイン）。slotWallet を省くと同じ財布（002 FR-102, FR-103）
         private readonly Wallet wallet;
+        private readonly Wallet betWallet;
         private readonly GameRandom random;
         private readonly int bet;
         private readonly float waitSeconds;
@@ -102,7 +104,7 @@ namespace UnitySlotTower.Core.Slot
         private SlotPayout carriedBonus;
         private bool bonusFromKakuhen;
 
-        public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting, PauseState pause = null)
+        public SlotMachine(TableSet tables, Wallet wallet, GameRandom random, int setting, PauseState pause = null, Wallet slotWallet = null)
         {
             if (setting < SlotProbabilityTable.MinSetting || setting > SlotProbabilityTable.MaxSetting)
                 throw new ArgumentOutOfRangeException(nameof(setting));
@@ -119,6 +121,7 @@ namespace UnitySlotTower.Core.Slot
             kakuhenEntryRate = rules.KakuhenEntryRate;
             kakuhenGames = rules.KakuhenGames;
             this.wallet = wallet;
+            betWallet = slotWallet ?? wallet;
             this.random = random;
             this.pause = pause;
             Setting = setting;
@@ -175,7 +178,7 @@ namespace UnitySlotTower.Core.Slot
             if (waitRemaining > 0f) return LeverResult.Waiting;
 
             var cost = ReplayPending ? 0 : bet;
-            if (!wallet.TrySpend(cost)) return LeverResult.NotEnoughCoins;
+            if (!betWallet.TrySpend(cost)) return LeverResult.NotEnoughCoins;
 
             betPaid = cost;
             ReplayPending = false;

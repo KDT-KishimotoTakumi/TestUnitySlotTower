@@ -107,6 +107,9 @@ namespace UnitySlotTower.EditorTools
         private static readonly Color LifeTextColor = Color.white;
         private static readonly Color WaveTextColor = new Color(0.85f, 0.92f, 1f);
         private static readonly Color PauseBarColor = new Color(1f, 1f, 1f, 0.95f);
+        private static readonly Color StockBadgeColor = new Color(0f, 0f, 0f, 0.7f);
+        private static readonly Color RetreatPanelColor = new Color(0.08f, 0.1f, 0.16f, 0.82f);
+        private static readonly Color RetreatButtonColor = new Color(0.78f, 0.2f, 0.2f);
         private const string RoundedSpritePath = "UI/Skin/UISprite.psd";
         private const string CircleSpritePath = "UI/Skin/Knob.psd";
 
@@ -133,9 +136,9 @@ namespace UnitySlotTower.EditorTools
         private const float CardTop = 0.94f;
         private const float GlowMarginX = 0.06f;
         private const float GlowMarginY = 0.05f;
-        private const float GlyphLeft = 0.08f;
-        private const float GlyphRight = 0.92f;
-        private const float GlyphBottom = 0.34f;
+        private const float GlyphLeft = 0.04f;
+        private const float GlyphRight = 0.62f;
+        private const float GlyphBottom = 0.36f;
         private const float GlyphTop = 0.8f;
         private const float BufferGlyphScaleX = 0.55f;
         private const float DiamondAngle = 45f;
@@ -143,9 +146,10 @@ namespace UnitySlotTower.EditorTools
         private const float KeyLeft = 0.02f;
         private const float KeyRight = 0.26f;
         private const float KeyBottom = 0.78f;
-        private const float StockLeft = 0.56f;
-        private const float StockBottom = 0.34f;
-        private const float StockTop = 0.54f;
+        private const float StockLeft = 0.03f;
+        private const float StockRight = 0.5f;
+        private const float StockBottom = 0.36f;
+        private const float StockTop = 0.56f;
         private const float CostLeft = 0.06f;
         private const float CostRight = 0.94f;
         private const float CostBottom = 0.02f;
@@ -157,19 +161,46 @@ namespace UnitySlotTower.EditorTools
         private const float IconCostFontSize = 80f;
         private const float IconKeyFontSize = 32f;
         private const float IconStockFontSize = 44f;
+        // 強化ボタン（カード右側。▲ とその下の費用）
+        private const float UpgradeLeft = 0.64f;
+        private const float UpgradeRight = 0.98f;
+        private const float UpgradeBottom = 0.34f;
+        private const float UpgradeTop = 0.82f;
+        private const float UpgradeGlyphBottom = 0.44f;
+        private const float UpgradeCostTop = 0.42f;
+        private const float UpgradeGlyphInset = 0.14f;
+        private const float IconUpgradeCostFontSize = 44f;
+        // 撤退の板（戦闘領域の中。返還額と × ボタン）
+        private const float RetreatPanelWidth = 250f;
+        private const float RetreatPanelHeight = 92f;
+        private const float RetreatRefundRight = 0.52f;
+        private const float RetreatButtonLeft = 0.58f;
+        private const float RetreatButtonRight = 0.97f;
+        private const float RetreatButtonBottom = 0.1f;
+        private const float RetreatButtonTop = 0.9f;
+        private const float RetreatRefundFontSize = 60f;
+        private const float RetreatMarkFontSize = 80f;
         // 右: 配置数と ▶ ❚❚
         private const float DeployedLeft = 0.83f;
         private const float DeployedRight = 0.99f;
-        private const float DeployedBottom = 0.7f;
-        private const float DeployedTop = 0.97f;
+        private const float DeployedBottom = 0.76f;
+        private const float DeployedTop = 0.98f;
         private const float DeployedFontSize = 60f;
         private const float StartLeft = 0.83f;
         private const float StartRight = 0.905f;
         private const float PauseLeft = 0.915f;
         private const float PauseRight = 0.99f;
-        private const float ButtonBottom = 0.08f;
-        private const float ButtonTop = 0.66f;
+        private const float ButtonBottom = 0.04f;
+        private const float ButtonTop = 0.5f;
         private const float GlyphInset = 0.2f;
+        // BGM の音量（配置数の下、▶ ❚❚ の上の段: スピーカーのボタンと段階の数字。002）
+        private const float SpeakerLeft = 0.83f;
+        private const float SpeakerRight = 0.905f;
+        private const float SpeakerBottom = 0.52f;
+        private const float SpeakerTop = 0.74f;
+        private const float VolumeTextLeft = 0.915f;
+        private const float VolumeTextRight = 0.99f;
+        private const float VolumeFontSize = 56f;
         private const float PauseBarInnerMin = 0.28f;
         private const float PauseBarInnerMax = 0.44f;
         private const float PauseBarOuterMin = 0.56f;
@@ -189,7 +220,7 @@ namespace UnitySlotTower.EditorTools
             CreateLight();
             var field = CreateField(catalog);
             var runner = CreateBattle(catalog, field, cabinet, battleCamera);
-            CreatePlacementUi(operationBar, runner, field, battleCamera);
+            CreatePlacementUi(operationBar, runner, field, battleCamera, CreateRetreatView(battleArea));
             CreateOperationBar(operationBar, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
             CreatePauseOverlay(battleArea, runner);
 
@@ -502,7 +533,7 @@ namespace UnitySlotTower.EditorTools
         }
 
         /// <summary>配置の入力（T208）。操作バーの召喚アイコン、フィールド上の印、入力の受け口を作る。</summary>
-        private static void CreatePlacementUi(RectTransform bar, BattleRunner runner, BattleFieldView field, Camera battleCamera)
+        private static void CreatePlacementUi(RectTransform bar, BattleRunner runner, BattleFieldView field, Camera battleCamera, RetreatView retreatView)
         {
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);
             var roles = (UnitRole[])System.Enum.GetValues(typeof(UnitRole));
@@ -529,7 +560,43 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("markers").objectReferenceValue = markers;
             SetArray(serialized.FindProperty("icons"), icons);
             serialized.FindProperty("deployedText").objectReferenceValue = deployedText;
+            serialized.FindProperty("retreatView").objectReferenceValue = retreatView;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>選択した味方の足元に出す、返還額と × ボタンの板（T308）。選択がない間は非表示。位置合わせは RetreatView が行う。</summary>
+        private static RetreatView CreateRetreatView(RectTransform battleArea)
+        {
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);
+            var root = CreateRect("Retreat", battleArea, Vector2.zero, Vector2.one);
+            var panel = CreateRect("RetreatPanel", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            panel.pivot = new Vector2(0.5f, 1f);
+            panel.sizeDelta = new Vector2(RetreatPanelWidth, RetreatPanelHeight);
+            var background = panel.gameObject.AddComponent<Image>();
+            background.color = RetreatPanelColor;
+            background.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+            background.type = Image.Type.Sliced;
+            background.raycastTarget = false;
+
+            var refundText = CreateLabel("RefundText", panel, Vector2.zero, new Vector2(RetreatRefundRight, 1f), "0", RetreatRefundFontSize,
+                OperationBarView.CoinGain, font);
+            var buttonImage = CreateImage("RetreatButton", panel, new Vector2(RetreatButtonLeft, RetreatButtonBottom),
+                new Vector2(RetreatButtonRight, RetreatButtonTop), RetreatButtonColor);
+            buttonImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+            buttonImage.type = Image.Type.Sliced;
+            buttonImage.raycastTarget = true;
+            var button = buttonImage.gameObject.AddComponent<BarButton>();
+            CreateLabel("RetreatMark", buttonImage.transform, Vector2.zero, Vector2.one, "×", RetreatMarkFontSize, Color.white, font);
+            panel.gameObject.SetActive(false);
+
+            var view = root.gameObject.AddComponent<RetreatView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("panel").objectReferenceValue = panel;
+            serialized.FindProperty("area").objectReferenceValue = battleArea;
+            serialized.FindProperty("refundText").objectReferenceValue = refundText;
+            serialized.FindProperty("button").objectReferenceValue = button;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return view;
         }
 
         /// <summary>一時停止中だけ戦闘領域に出す暗幕と停止の印（T307）。表示の切り替えは PauseOverlay が行う。</summary>
@@ -589,8 +656,27 @@ namespace UnitySlotTower.EditorTools
             var fill = CreateImage("CooldownFill", root, Vector2.zero, new Vector2(1f, 0f), CooldownFillColor).rectTransform;
             var costText = CreateLabel("CostText", root, new Vector2(CostLeft, CostBottom), new Vector2(CostRight, CostTop), "0", IconCostFontSize, SummonIcon.CostNormal, font);
             var keyText = CreateLabel("KeyText", root, new Vector2(KeyLeft, KeyBottom), new Vector2(KeyRight, 1f), "0", IconKeyFontSize, KeyLabelColor, font);
-            var stockText = CreateLabel("StockText", root, new Vector2(StockLeft, StockBottom), new Vector2(1f, StockTop), string.Empty, IconStockFontSize, CardTextColor, font);
-            stockText.alignment = TextAlignmentOptions.MidlineRight;
+            var stockBadge = CreateImage("StockBadge", root, new Vector2(StockLeft, StockBottom), new Vector2(StockRight, StockTop), StockBadgeColor);
+            stockBadge.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+            stockBadge.type = Image.Type.Sliced;
+            stockBadge.gameObject.SetActive(false);
+            var stockText = CreateLabel("StockText", root, new Vector2(StockLeft, StockBottom), new Vector2(StockRight, StockTop), string.Empty, IconStockFontSize, CardTextColor, font);
+            stockText.alignment = TextAlignmentOptions.MidlineLeft;
+
+            // 強化ボタン（▲ と次の段階の費用）。暗幕・待ち時間の塗りの上に置き、カードが暗くても押せることが分かるようにする
+            var upgradeRoot = CreateRect($"UpgradeButton{index}", root, new Vector2(UpgradeLeft, UpgradeBottom), new Vector2(UpgradeRight, UpgradeTop));
+            var upgradeHit = upgradeRoot.gameObject.AddComponent<Image>();
+            upgradeHit.color = SummonIcon.DimClear;
+            upgradeHit.raycastTarget = true;
+            var upgradeButton = upgradeRoot.gameObject.AddComponent<BarButton>();
+            var upgradeBackground = CreateImage("UpgradeBackground", upgradeRoot, new Vector2(0f, UpgradeGlyphBottom), Vector2.one, SummonIcon.UpgradeOff);
+            upgradeBackground.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>(RoundedSpritePath);
+            upgradeBackground.type = Image.Type.Sliced;
+            var upgradeGlyph = CreateSquareImage("UpgradeGlyph", upgradeBackground.transform,
+                new Vector2(UpgradeGlyphInset, UpgradeGlyphInset), new Vector2(1f - UpgradeGlyphInset, 1f - UpgradeGlyphInset), SummonIcon.UpgradeGlyphOff);
+            var upgradeCostText = CreateLabel($"UpgradeCost{index}", upgradeRoot, Vector2.zero, new Vector2(1f, UpgradeCostTop), "0",
+                IconUpgradeCostFontSize, SummonIcon.CostNormal, font);
+            var flash = CreateImage("Flash", root, Vector2.zero, Vector2.one, SummonIcon.FlashClear);
 
             // 強化段階の菱形（右上に最大 5 つ）。正方形を 45 度回して作る
             const float cardUnitsWidth = CardWidth * BarUnitsWidth;
@@ -617,6 +703,12 @@ namespace UnitySlotTower.EditorTools
             serialized.FindProperty("costText").objectReferenceValue = costText;
             serialized.FindProperty("keyText").objectReferenceValue = keyText;
             serialized.FindProperty("stockText").objectReferenceValue = stockText;
+            serialized.FindProperty("stockBadge").objectReferenceValue = stockBadge.gameObject;
+            serialized.FindProperty("upgradeButton").objectReferenceValue = upgradeButton;
+            serialized.FindProperty("upgradeBackground").objectReferenceValue = upgradeBackground;
+            serialized.FindProperty("upgradeGlyph").objectReferenceValue = upgradeGlyph;
+            serialized.FindProperty("upgradeCostText").objectReferenceValue = upgradeCostText;
+            serialized.FindProperty("flash").objectReferenceValue = flash;
             SetArray(serialized.FindProperty("diamonds"), diamonds);
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return icon;
@@ -641,6 +733,21 @@ namespace UnitySlotTower.EditorTools
             CreateImage("PauseBarRight", pauseBars.transform, new Vector2(PauseBarOuterMin, GlyphInset), new Vector2(PauseBarOuterMax, 1f - GlyphInset), PauseBarColor);
             var resumeGlyph = CreateGlyph("ResumeGlyph", pauseBackground.transform);
             resumeGlyph.gameObject.SetActive(false);
+
+            var speakerBackground = CreateImage("SpeakerButton", bar, new Vector2(SpeakerLeft, SpeakerBottom), new Vector2(SpeakerRight, SpeakerTop), OperationBarView.PauseNormal);
+            speakerBackground.raycastTarget = true;
+            var speakerButton = speakerBackground.gameObject.AddComponent<BarButton>();
+            var speakerGlyph = CreateGlyph("SpeakerGlyph", speakerBackground.transform);
+            var volumeText = CreateLabel("VolumeText", bar, new Vector2(VolumeTextLeft, SpeakerBottom), new Vector2(VolumeTextRight, SpeakerTop), "3", VolumeFontSize, DisplayTextColor, font);
+
+            var bgm = bar.gameObject.AddComponent<BgmPlayer>();
+            var bgmSerialized = new SerializedObject(bgm);
+            bgmSerialized.FindProperty("runner").objectReferenceValue = runner;
+            bgmSerialized.FindProperty("inputActions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            bgmSerialized.FindProperty("speakerButton").objectReferenceValue = speakerButton;
+            bgmSerialized.FindProperty("speakerImage").objectReferenceValue = speakerGlyph;
+            bgmSerialized.FindProperty("volumeText").objectReferenceValue = volumeText;
+            bgmSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             var view = bar.gameObject.AddComponent<OperationBarView>();
             var serialized = new SerializedObject(view);

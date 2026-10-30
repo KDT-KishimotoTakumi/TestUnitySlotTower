@@ -31,14 +31,16 @@ namespace UnitySlotTower.Core.Combat
     /// 強化の段階（UnitUpgrades）とコイン（Wallet）はこの外にあり、そのまま引き継がれる。
     /// 盤面・敵・戦闘は 1 ウェーブごとに作り直して Prepare で渡す。召喚役・ライフ・財布は作り直さず引き継ぐ。
     /// </summary>
-    public sealed class WaveFlow
+    public sealed class WaveFlow : IUnitStock
     {
         /// <summary>ゲームのウェーブ数（FR-010）。</summary>
         public const int DefaultWaveCount = 5;
 
         private readonly UnitSummoner summoner;
         private readonly PlayerLife life;
+        // ライフボーナスはスロットコイン（slotWallet、省くと wallet。002 FR-105）。引き継ぎは両方とも財布側で保たれる（FR-106）
         private readonly Wallet wallet;
+        private readonly Wallet slotWallet;
         private readonly int lifeBonusPerLife;
         private readonly PauseState pause;
         private readonly Dictionary<string, int> stock = new Dictionary<string, int>();
@@ -61,9 +63,10 @@ namespace UnitySlotTower.Core.Combat
         public event Action AllWavesCleared;
 
         public WaveFlow(UnitSummoner summoner, PlayerLife life, Wallet wallet, int lifeBonusPerLife, int waveCount = DefaultWaveCount,
-            PauseState pause = null)
+            PauseState pause = null, Wallet slotWallet = null)
         {
             this.pause = pause;
+            this.slotWallet = slotWallet;
             this.summoner = summoner ?? throw new ArgumentNullException(nameof(summoner));
             this.life = life ?? throw new ArgumentNullException(nameof(life));
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
@@ -134,7 +137,7 @@ namespace UnitySlotTower.Core.Combat
         private void FinishWave()
         {
             var bonus = life.Current * lifeBonusPerLife;
-            if (bonus > 0) wallet.Add(bonus);
+            if (bonus > 0) (slotWallet ?? wallet).Add(bonus);
 
             stock.Clear();
             retreatBuffer.Clear();

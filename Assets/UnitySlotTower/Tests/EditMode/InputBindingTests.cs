@@ -30,10 +30,9 @@ namespace UnitySlotTower.Tests
                 { "CycleSelection", new[] { "<Keyboard>/tab" } },
                 { "Retreat", new[] { "<Keyboard>/x" } },
                 { "SlotLever", new[] { "<Keyboard>/space" } },
-                { "StopReelLeft", new[] { "<Keyboard>/j" } },
-                { "StopReelCenter", new[] { "<Keyboard>/k" } },
-                { "StopReelRight", new[] { "<Keyboard>/l" } },
                 { "Pause", new[] { "<Keyboard>/p", "<Keyboard>/escape" } },
+                { "BgmVolumeUp", new[] { "<Keyboard>/equals", "<Keyboard>/numpadPlus" } },
+                { "BgmVolumeDown", new[] { "<Keyboard>/minus", "<Keyboard>/numpadMinus" } },
             };
             for (var n = 1; n <= 5; n++)
             {

@@ -24,11 +24,11 @@ namespace UnitySlotTower.Runtime
         public static readonly Color ReplayLampOff = new Color(0.1f, 0.15f, 0.3f);
         public static readonly Color ReplayLampOn = new Color(0.3f, 0.6f, 1f);
         public static readonly Color PremonitionGlowOff = new Color(1f, 0.85f, 0.2f, 0f);
-        public static readonly Color CoinNormal = new Color(0.95f, 0.78f, 0.2f);
+        // スロットコインは銀（キャラクターコインの金と見分ける。002 FR-107）
+        public static readonly Color CoinNormal = new Color(0.75f, 0.85f, 0.95f);
         public static readonly Color CoinAlert = new Color(0.9f, 0.1f, 0.1f);
 
         private const string LeverActionName = "SlotLever";
-        private static readonly string[] StopActionNames = { "StopReelLeft", "StopReelCenter", "StopReelRight" };
 
         private const float CoinBlinkSeconds = 1.2f;
         private const float CoinBlinkHalfPeriod = 0.15f;
@@ -70,9 +70,7 @@ namespace UnitySlotTower.Runtime
 
         private readonly SimClock clock = new SimClock();
         private readonly double[] shown = new double[SlotLayout.ReelCount];
-        private readonly Action<InputAction.CallbackContext>[] stopCallbacks = new Action<InputAction.CallbackContext>[SlotLayout.ReelCount];
         private readonly UnityAction[] stopClicks = new UnityAction[SlotLayout.ReelCount];
-        private readonly InputAction[] stopActions = new InputAction[SlotLayout.ReelCount];
 
         private Action stepAction;
         private Action<InputAction.CallbackContext> leverCallback;
@@ -91,7 +89,10 @@ namespace UnitySlotTower.Runtime
         // 先バレの点滅の位相に使う累積時間。一時停止中は進めず、再開で続きから点滅する
         private float viewTime;
 
+        /// <summary>キャラクターコイン（スロットの払い出しの行き先。召喚・強化の資金。戦闘と共有）。</summary>
         public Wallet Wallet { get; private set; }
+        /// <summary>スロットコイン（掛け金を払う資金。敵のドロップとライフボーナスで増える）。</summary>
+        public Wallet SlotWallet { get; private set; }
         public SlotMachine Machine { get; private set; }
         /// <summary>一時停止の共有状態（戦闘の <see cref="BattleRunner"/> と同じものを使う）。</summary>
         public PauseState Pause { get; private set; }
@@ -103,20 +104,20 @@ namespace UnitySlotTower.Runtime
             // OnEnable は Awake が途中で失敗しても呼ばれる。null のコールバックを InputAction に登録すると、
             // Reload Domain 無効ではアセット側に残り続け、以降の Play の登録（performed +=）で NRE になるため先に作る
             stepAction = () => Machine.Tick(SimClock.StepSeconds);
-            leverCallback = _ => HandleLever();
+            leverCallback = _ => HandleSpace();
             leverClick = HandleLever;
             for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
             {
                 var index = reel;
-                stopCallbacks[reel] = _ => HandleStop(index);
                 stopClicks[reel] = () => HandleStop(index);
             }
 
             var tables = catalog.LoadTables();
             waitSeconds = tables.SlotRules.WaitSeconds;
             Wallet = new Wallet(tables.GameConfig.InitialCoins);
+            SlotWallet = new Wallet(tables.GameConfig.InitialSlotCoins);
             Pause = new PauseState();
-            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting, Pause);
+            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting, Pause, SlotWallet);
             Payouts = tables.SlotPayouts.Payouts;
 
             var reels = tables.SlotReels;
@@ -137,12 +138,6 @@ namespace UnitySlotTower.Runtime
             leverAction = inputActions.FindAction(LeverActionName, true);
             leverAction.performed += leverCallback;
             leverAction.Enable();
-            for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
-            {
-                stopActions[reel] = inputActions.FindAction(StopActionNames[reel], true);
-                stopActions[reel].performed += stopCallbacks[reel];
-                stopActions[reel].Enable();
-            }
         }
 
         private void OnDisable()
@@ -157,12 +152,6 @@ namespace UnitySlotTower.Runtime
             {
                 leverAction.performed -= leverCallback;
                 leverAction.Disable();
-            }
-            for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
-            {
-                if (stopActions[reel] == null) continue;
-                stopActions[reel].performed -= stopCallbacks[reel];
-                stopActions[reel].Disable();
             }
         }
 
@@ -202,6 +191,22 @@ namespace UnitySlotTower.Runtime
             audioPaused = paused;
             if (paused) audioSource.Pause();
             else audioSource.UnPause();
+        }
+
+        /// <summary>Space キー。回転中は止まっていない一番左のリールを止め、それ以外はレバー。</summary>
+        public void HandleSpace()
+        {
+            if (Machine.IsPaused) return;
+            if (Machine.Phase == SlotPhase.Spinning)
+            {
+                for (var reel = 0; reel < SlotLayout.ReelCount; reel++)
+                {
+                    if (Machine.IsStopped(reel)) continue;
+                    HandleStop(reel);
+                    return;
+                }
+            }
+            HandleLever();
         }
 
         /// <summary>レバー（ベット込み）。ボタンとキーの両方から呼ばれる。一時停止中は受け付けない（FR-012）。</summary>
@@ -257,7 +262,7 @@ namespace UnitySlotTower.Runtime
 
         private void RefreshDisplays(float deltaTime)
         {
-            var coins = Wallet.Coins;
+            var coins = SlotWallet.Coins;
             if (coins != shownCoins)
             {
                 shownCoins = coins;
