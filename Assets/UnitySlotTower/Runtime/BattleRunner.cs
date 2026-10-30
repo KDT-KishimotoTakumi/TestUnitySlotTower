@@ -80,6 +80,11 @@ namespace UnitySlotTower.Runtime
         public Wallet Wallet { get; private set; }
         /// <summary>スロットコイン（スロットの掛け金。敵のドロップとライフボーナスが入る）。</summary>
         public Wallet SlotWallet { get; private set; }
+        /// <summary>プレイの結果（クリア／ゲームオーバー）。決まったら変わらず、同時に一時停止になる（FR-005）。</summary>
+        public GameOutcome Outcome { get; private set; }
+        public bool IsEnded => Outcome != GameOutcome.None;
+        /// <summary>結果が決まったときのウェーブ番号（クリア時は最終ウェーブ）。</summary>
+        public int ReachedWave { get; private set; }
         /// <summary>ウェーブ進行（準備・戦闘・無料ストック）。Start 前は null。</summary>
         public WaveFlow Flow { get; private set; }
         /// <summary>一時停止の共有状態（筐体と同じもの）。Start 前は null。</summary>
@@ -204,14 +209,14 @@ namespace UnitySlotTower.Runtime
         /// <summary>一時停止を切り替える（FR-012）。停止中は戦闘・召喚の待ち時間・ウェーブ進行・スロットの時間が進まない。Start 前は何もしない。</summary>
         public void SetPaused(bool paused)
         {
-            if (Pause == null) return;
+            if (Pause == null || IsEnded) return;
             Pause.SetPaused(paused);
         }
 
         /// <summary>一時停止と再開を切り替える（Esc / P、ポーズボタンの入口）。切り替え後に停止中なら true。Start 前は false。</summary>
         public bool TogglePause()
         {
-            return Pause != null && Pause.Toggle();
+            return Pause != null && !IsEnded && Pause.Toggle();
         }
 
         private void Update()
@@ -219,6 +224,18 @@ namespace UnitySlotTower.Runtime
             // 停止中はバックログを溜めない（SimClock が 0 ステップを返す）
             clock.Paused = IsPaused;
             clock.Advance(Time.deltaTime, stepAction);
+            CheckOutcome();
+        }
+
+        // 結果が決まったら、その時点で全体を止める（スロット・戦闘・BGM は共有の PauseState で止まる）。以後は再開できない
+        private void CheckOutcome()
+        {
+            if (IsEnded || Flow == null || Life == null) return;
+            var outcome = GameOutcomeJudge.Evaluate(Life.IsGameOver, Flow.State);
+            if (outcome == GameOutcome.None) return;
+            Outcome = outcome;
+            ReachedWave = Flow.WaveNumber;
+            Pause.SetPaused(true);
         }
 
         private void Step()

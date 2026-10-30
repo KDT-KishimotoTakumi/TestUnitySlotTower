@@ -31,6 +31,9 @@ namespace UnitySlotTower.Tests
                 { "Retreat", new[] { "<Keyboard>/x" } },
                 { "SlotLever", new[] { "<Keyboard>/space" } },
                 { "Pause", new[] { "<Keyboard>/p", "<Keyboard>/escape" } },
+                { "MenuConfirm", new[] { "<Keyboard>/enter", "<Keyboard>/numpadEnter", "<Keyboard>/space" } },
+                { "MenuBack", new[] { "<Keyboard>/escape" } },
+                { "MenuDigit", new[] { "<Keyboard>/1", "<Keyboard>/numpad1", "<Keyboard>/2", "<Keyboard>/numpad2", "<Keyboard>/3", "<Keyboard>/numpad3", "<Keyboard>/4", "<Keyboard>/numpad4", "<Keyboard>/5", "<Keyboard>/numpad5", "<Keyboard>/6", "<Keyboard>/numpad6" } },
                 { "BgmVolumeUp", new[] { "<Keyboard>/equals", "<Keyboard>/numpadPlus" } },
                 { "BgmVolumeDown", new[] { "<Keyboard>/minus", "<Keyboard>/numpadMinus" } },
             };

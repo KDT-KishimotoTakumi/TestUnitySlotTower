@@ -55,7 +55,6 @@ namespace UnitySlotTower.Runtime
 
         [SerializeField] private PresentationCatalog catalog;
         [SerializeField] private InputActionAsset inputActions;
-        [SerializeField, Range(SlotProbabilityTable.MinSetting, SlotProbabilityTable.MaxSetting)] private int setting = 1;
         [SerializeField] private SlotReelView[] reelViews = new SlotReelView[0];
         [SerializeField] private Button leverButton;
         [SerializeField] private Button[] stopButtons = new Button[0];
@@ -117,7 +116,7 @@ namespace UnitySlotTower.Runtime
             Wallet = new Wallet(tables.GameConfig.InitialCoins);
             SlotWallet = new Wallet(tables.GameConfig.InitialSlotCoins);
             Pause = new PauseState();
-            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), setting, Pause, SlotWallet);
+            Machine = new SlotMachine(tables, Wallet, new GameRandom((ulong)DateTime.UtcNow.Ticks), GameSession.Difficulty, Pause, SlotWallet);
             Payouts = tables.SlotPayouts.Payouts;
 
             var reels = tables.SlotReels;

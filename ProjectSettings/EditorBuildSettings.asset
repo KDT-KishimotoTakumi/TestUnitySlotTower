@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/UnitySlotTower/Scenes/Title.unity
+    guid: bd3d268aa22f4434b8534a7a4fcbff1d
+  - enabled: 1
     path: Assets/UnitySlotTower/Scenes/Game.unity
     guid: 6d07fcee610ad98499fa8ab0242297d2
   m_configObjects:

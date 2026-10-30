@@ -2,7 +2,7 @@
 
 ## 現在の作業
 
-更新: 2026-10-31 Asia/Tokyo / 状態: M0〜M2 完了、M3 は T301〜T308 完了（残りは T309）。002（コイン2種類化・BGM）実装済み。EditMode 375 件・PlayMode 41 件・ハーネス 8 件成功
+更新: 2026-10-31 Asia/Tokyo / 状態: M0〜M2 完了、M3 は T301〜T308 完了（残りは T309）、M4 は T401・T402 完了。002（コイン2種類化・BGM）実装済み。EditMode 378 件・PlayMode 46 件・ハーネス 8 件成功
 
 - 仕様: [`spec.md`](../../specs/001-slot-tower-defense/spec.md)（承認済み）/ [`plan.md`](../../specs/001-slot-tower-defense/plan.md) / [`tasks.md`](../../specs/001-slot-tower-defense/tasks.md)。ユーザーが 2026-10-28 に実装開始を依頼済み。
 - 完了: asmdef 5つ、CSV パーサー、`SimClock`/`GameRandom`、`TableSet`/`GameConfig`/`TableValidator`、`PresentationCatalog`（クラスのみ）、`Data/Tables/` の雛形。EditMode 17件成功、ハーネス8件成功（2026-10-28）。
@@ -39,7 +39,7 @@
 - 002（コイン2種類化・BGM、[`specs/002-dual-coin-and-bgm/`](../../specs/002-dual-coin-and-bgm/spec.md)）: キャラクターコイン=従来の `Wallet`（初期1000、召喚・強化・撤退の返還・スロットの払い出し）、スロットコイン=`slotWallet`（初期500、掛け金・敵のドロップ・ライフボーナス）。`SlotMachine`/`BattleSimulation`/`WaveFlow` の末尾引数 `slotWallet` は省略すると1つの財布（テスト用）。`SlotCabinetView.SlotWallet` / `BattleRunner.SlotWallet` が本番の共有財布。BGM は `Runtime/BgmPlayer`（操作バーに付く、コード生成ループ、音量0〜5、スピーカークリックと `=`/`-` キー）。未確認: BGM の聴感、経済バランス（T309）。
 - スロットのキー操作は Space のみ（回転していなければレバー、回転中は左から順に停止。J/K/L は廃止、停止ボタンのクリックは残る）。T308 stage 2（強化▲・撤退×・ストック・選択）も実装・テスト済み。
 - 自動ビルドは日本語を含むパス（`ドキュメント`）では Managed Stripping が失敗する（UnityLinker）。ASCII パス `C:\Temp\SlotTowerStrip` にコピーして batchmode でビルドすると High で 168.6MB → 136.5MB（ストリップ後の手動動作確認済み）。標準手順には未反映（設定は元のまま）。
-- 次の一手: T309（通し手動プレイで経済・難易度を調整。コイン分離後の初期値 1000/500・掛け金3は仮）、M4（Title・難易度選択・リザルト）。BGM の聴感確認。
+- M4: T401（Title・難易度選択）と T402（リザルト・リトライ・タイトルへ）は完了。ビルド設定は Title（起動）→ Game。`Tools/UnitySlotTower/Build Title Scene` / `Build Game Scene` で再生成（Game を再生成するとビルド設定も更新）。結果画面の入力は専用の `MenuConfirm`/`MenuBack`/`MenuDigit`（結果表示から 0.6 秒は入力ガードで無視。Space がスロットの連打と重なるため）。次の一手: M4 の残り（T403 文字なし説明、T404 一時停止中の「?」と閲覧、T405 キーボード/マウス単独で1ウェーブ、T406 全画面の文字チェック）、T309（通し手動プレイで経済・難易度を調整。コイン分離後の初期値 1000/500・掛け金3は仮）、M4（Title・難易度選択・リザルト）。BGM の聴感確認。
 - テスト実行: `Invoke-UnityMcp.ps1 editor tests --mode EditMode --async` → `poll-test <job_id>`。スクリプトを変えたら先に `editor refresh`（下記の注意）。
 
 ## 注意（環境）

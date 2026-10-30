@@ -54,8 +54,8 @@
 
 ## M4 外枠
 
-- [ ] T401 (FR-005) `Title` シーン（ロゴのみ文字可）と難易度選択（設定1〜6） — 検証: PlayMode テスト（AC-004）
-- [ ] T402 (FR-005) リザルト（クリア／ゲームオーバーをアイコンと数字で表示）、リトライ、タイトルへ戻る — 検証: PlayMode テスト（リトライで初期化: AC-004）
+- [x] T401 (FR-005) `Title` シーン（ロゴのみ文字可）と難易度選択（設定1〜6） — 検証: PlayMode テスト（AC-004） — 2026-10-31 `Title` シーン（ロゴ「SLOT TOWER」、▶、設定1〜6のプレート、`TitleView`）、`GameSession.Difficulty` → `SlotCabinetView` の設定。Enter/Space・数字1〜6・Esc 対応。`GameFlowPlayModeTests`（PlayMode 46 件成功）、画像 `Artifacts/Automation/Editor/m4-title.png`・`m4-select.png`
+- [x] T402 (FR-005) リザルト（クリア／ゲームオーバーをアイコンと数字で表示）、リトライ、タイトルへ戻る — 検証: PlayMode テスト（リトライで初期化: AC-004） — 2026-10-31 結果の判定 `GameOutcomeJudge`（EditMode `GameFlowTests`）と Game 内の `ResultView`（★/×、到達ウェーブ、難易度、↻ リトライ、⌂ タイトル。Enter=リトライ、Esc=タイトル）。結果が決まると全体が止まり再開不可。リトライで財布・ライフ・盤面が初期化されることを `Retry_ReloadsGameWithInitialStateAndSameDifficulty` で確認（EditMode 378 / PlayMode 46 件成功）、画像 `m4-result.png`。クリア側（★）の実画面は未確認（判定は EditMode のみ）
 - [ ] T403 (FR-004) 文字なし説明（薄暗いオーバーレイ、矢印・手のアニメ、初回のみ表示）を召喚・配置・向き・スロット・ボーナス・強化・撤退に付ける — 検証: 手動プレイ、第三者確認（AC-003）
 - [ ] T404 (FR-012) 一時停止中の「?」: 役の図柄＝配当の早見表、味方の範囲図と数値 — 検証: Editor 画像、文字チェックテスト
 - [ ] T405 (FR-002) キーボードだけ・マウスだけで1ウェーブ通せることの確認と不足操作の補完 — 検証: PlayMode テスト＋手動（AC-002）

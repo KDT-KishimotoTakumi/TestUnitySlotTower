@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEditor;
@@ -17,7 +18,7 @@ using UnitySlotTower.Runtime;
 namespace UnitySlotTower.EditorTools
 {
     /// <summary>Game シーンの骨組み（横長 16:9 レイアウト）を作り直す。T006。</summary>
-    public static class GameSceneBuilder
+    public static partial class GameSceneBuilder
     {
         private const string ScenePath = "Assets/UnitySlotTower/Scenes/Game.unity";
         private const string CatalogPath = "Assets/UnitySlotTower/Data/PresentationCatalog.asset";
@@ -223,10 +224,12 @@ namespace UnitySlotTower.EditorTools
             CreatePlacementUi(operationBar, runner, field, battleCamera, CreateRetreatView(battleArea));
             CreateOperationBar(operationBar, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
             CreatePauseOverlay(battleArea, runner);
+            // 結果画面は最後（いちばん手前）に置く
+            CreateResultOverlay((RectTransform)battleArea.parent, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            ApplyBuildScenes();
             ApplyPlayerSettings();
             AssetDatabase.SaveAssets();
             Debug.Log($"Game scene built: {ScenePath}, catalog tables: {catalog.LoadTables().Get(TableSet.GameConfigFile).Rows.Count} config rows");
@@ -845,6 +848,69 @@ namespace UnitySlotTower.EditorTools
             material.color = color;
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        // 結果画面（クリア/ゲームオーバー）。PlayArea 全体に暗幕を敷き、中央に印・到達ウェーブ・難易度・ボタンを置く（T402）
+        private static readonly Color ResultDimColor = new Color(0f, 0f, 0f, 0.7f);
+        private static readonly Color ResultPanelColor = new Color(0.12f, 0.14f, 0.2f, 0.97f);
+        private static readonly Color RetryButtonColor = new Color(0.2f, 0.62f, 0.3f);
+        private static readonly Color TitleButtonColor = new Color(0.3f, 0.36f, 0.52f);
+        private static readonly Color DifficultyPlateColor = new Color(0.55f, 0.2f, 0.7f);
+        private const float ResultPanelLeft = 0.3f;
+        private const float ResultPanelRight = 0.7f;
+        private const float ResultPanelBottom = 0.2f;
+        private const float ResultPanelTop = 0.8f;
+        private const float ResultFontSize = 120f;
+
+        private static void CreateResultOverlay(RectTransform playArea, BattleRunner runner, TMP_FontAsset font)
+        {
+            var root = CreateRect("ResultOverlay", playArea, Vector2.zero, Vector2.one);
+            var content = CreateRect("Content", root, Vector2.zero, Vector2.one);
+            var dim = CreateImage("Dim", content, Vector2.zero, Vector2.one, ResultDimColor);
+            dim.raycastTarget = true;   // 後ろの操作を受けない
+            var panel = CreateImage("Panel", content, new Vector2(ResultPanelLeft, ResultPanelBottom), new Vector2(ResultPanelRight, ResultPanelTop), ResultPanelColor);
+
+            var outcomeIcon = CreateSquareImage("OutcomeIcon", panel.transform, new Vector2(0.3f, 0.56f), new Vector2(0.7f, 0.95f), Color.white);
+            var flagIcon = CreateSquareImage("WaveIcon", panel.transform, new Vector2(0.06f, 0.34f), new Vector2(0.24f, 0.52f), OperationBarView.FlagColor);
+            var waveText = CreateLabel("WaveText", panel.transform, new Vector2(0.26f, 0.32f), new Vector2(0.5f, 0.54f), "0/0", ResultFontSize, WaveTextColor, font);
+            CreateImage("DifficultyPlate", panel.transform, new Vector2(0.58f, 0.34f), new Vector2(0.72f, 0.52f), DifficultyPlateColor);
+            var difficultyText = CreateLabel("DifficultyText", panel.transform, new Vector2(0.58f, 0.32f), new Vector2(0.72f, 0.54f), "1", ResultFontSize, DisplayTextColor, font);
+
+            var retry = CreateResultButton("RetryButton", panel.transform, new Vector2(0.1f, 0.06f), new Vector2(0.45f, 0.28f), RetryButtonColor, out var retryBackground);
+            var retryGlyph = CreateGlyph("RetryGlyph", retryBackground.transform);
+            var title = CreateResultButton("TitleButton", panel.transform, new Vector2(0.55f, 0.06f), new Vector2(0.9f, 0.28f), TitleButtonColor, out var titleBackground);
+            var homeGlyph = CreateGlyph("HomeGlyph", titleBackground.transform);
+
+            var view = root.gameObject.AddComponent<ResultView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("runner").objectReferenceValue = runner;
+            serialized.FindProperty("inputActions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            serialized.FindProperty("content").objectReferenceValue = content.gameObject;
+            serialized.FindProperty("outcomeIcon").objectReferenceValue = outcomeIcon;
+            serialized.FindProperty("flagIcon").objectReferenceValue = flagIcon;
+            serialized.FindProperty("waveText").objectReferenceValue = waveText;
+            serialized.FindProperty("difficultyText").objectReferenceValue = difficultyText;
+            serialized.FindProperty("retryGlyph").objectReferenceValue = retryGlyph;
+            serialized.FindProperty("homeGlyph").objectReferenceValue = homeGlyph;
+            serialized.FindProperty("retryButton").objectReferenceValue = retry;
+            serialized.FindProperty("titleButton").objectReferenceValue = title;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static BarButton CreateResultButton(string name, Transform parent, Vector2 min, Vector2 max, Color color, out Image background)
+        {
+            background = CreateImage(name, parent, min, max, color);
+            background.raycastTarget = true;
+            return background.gameObject.AddComponent<BarButton>();
+        }
+
+        /// <summary>ビルド設定のシーン一覧。Title があれば先頭（起動シーン）、続けて Game。</summary>
+        private static void ApplyBuildScenes()
+        {
+            var scenes = new List<EditorBuildSettingsScene>();
+            if (File.Exists(TitleScenePath)) scenes.Add(new EditorBuildSettingsScene(TitleScenePath, true));
+            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         private static void ApplyPlayerSettings()

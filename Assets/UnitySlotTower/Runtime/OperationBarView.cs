@@ -187,12 +187,12 @@ namespace UnitySlotTower.Runtime
             return r <= 1f && (r < 0.62f || r > 0.72f);
         }
 
-        private static bool Flag(float x, float y)
+        public static bool Flag(float x, float y)
         {
             if (x >= -0.75f && x <= -0.55f && y >= -1f && y <= 1f) return true;
             return ShapeSprites.InTriangle(x, y, -0.55f, 0.95f, 0.85f, 0.45f, -0.55f, -0.05f);
         }
 
-        private static bool Triangle(float x, float y) => ShapeSprites.InTriangle(x, y, -0.55f, -0.8f, -0.55f, 0.8f, 0.85f, 0f);
+        public static bool Triangle(float x, float y) => ShapeSprites.InTriangle(x, y, -0.55f, -0.8f, -0.55f, 0.8f, 0.85f, 0f);
     }
 }
