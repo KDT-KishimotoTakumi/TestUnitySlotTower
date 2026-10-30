@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnitySlotTower.Core.Help;
 using UnitySlotTower.Core.Map;
 using UnitySlotTower.Core.Units;
 
@@ -22,6 +23,7 @@ namespace UnitySlotTower.Runtime
         public const string CursorMovePath = "Game/CursorMove";
         public const string PausePath = "Game/Pause";
         public const string RetreatPath = "Game/Retreat";
+        public const string HelpPath = "Game/Help";
         public const string CycleSelectionPath = "Game/CycleSelection";
         public const string SummonSelectPrefix = "Game/SummonSelect";
         private const int MaxIcons = 5;
@@ -39,6 +41,8 @@ namespace UnitySlotTower.Runtime
         [SerializeField] private SummonIcon[] icons = Array.Empty<SummonIcon>();
         [SerializeField] private TMP_Text deployedText;
         [SerializeField] private RetreatView retreatView;
+        [Tooltip("一時停止中の「?」の閲覧パネル（省略可。なければ停止中の選択はできない）")]
+        [SerializeField] private HelpView help;
 
         private readonly InputAction[] summonActions = new InputAction[MaxIcons];
 
@@ -57,11 +61,13 @@ namespace UnitySlotTower.Runtime
         private InputAction pauseAction;
         private InputAction retreatAction;
         private InputAction cycleAction;
+        private InputAction helpAction;
         private Vector2 lastPointer;
         private Vector2 lastMove;
         private bool previewShown;
         private bool selectionRangeShown;
         private bool clickArmed;
+        private bool viewActive;
         private float lastPlacementConfirmTime = float.NegativeInfinity;
         private int shownDeployed = -1;
 
@@ -101,6 +107,7 @@ namespace UnitySlotTower.Runtime
             pauseAction = Find(PausePath);
             retreatAction = Find(RetreatPath);
             cycleAction = Find(CycleSelectionPath);
+            helpAction = Find(HelpPath);
             for (var i = 0; i < MaxIcons; i++) summonActions[i] = Find(SummonSelectPrefix + (i + 1));
         }
 
@@ -111,6 +118,7 @@ namespace UnitySlotTower.Runtime
             ClearSelection();
             Disable(retreatAction);
             Disable(cycleAction);
+            Disable(helpAction);
             Disable(pointAction);
             Disable(pressAction);
             Disable(cancelAction);
@@ -169,6 +177,13 @@ namespace UnitySlotTower.Runtime
                 RefreshIcons();
                 return;
             }
+            // 再開したら、停止中に選んだ味方の選択（閲覧用）は外す（撤退の板を突然出さない）
+            if (viewActive)
+            {
+                viewActive = false;
+                clickArmed = false;
+                ClearSelection();
+            }
             PollKeyboard();
             // このフレームのキーで一時停止した場合は、マウスを読まずに停止中の処理へ移る（Pause の押下は二重に読まない）
             if (runner.IsPaused)
@@ -194,12 +209,78 @@ namespace UnitySlotTower.Runtime
                 AbortPlacement();
                 RefreshPlacementView();
             }
-            // 停止中は味方の選択もできない（撤退ボタンも出さない。閲覧は T308 第 3 段階）
-            ClearSelection();
+            // 閲覧できる（「?」が使える）停止中は、召喚カードと配置済みの味方の「選択」だけ許す（撤退ボタンは出さない。T404）。
+            // 結果画面・チュートリアルの停止中は従来どおり選択もできない
+            var viewing = help != null && help.IsAvailable;
+            if (!viewing || !viewActive) ClearSelection();
+            viewActive = viewing;
+            var move = cursorMoveAction.ReadValue<Vector2>();
+            var closedHelp = viewing && PollView(readPause, move);
             // マウスの移動量は読み捨てる（再開直後に古い差分で向きが動かないように）
             lastPointer = pointAction.ReadValue<Vector2>();
-            lastMove = cursorMoveAction.ReadValue<Vector2>();
-            if (readPause && pauseAction.WasPressedThisFrame()) runner.TogglePause();
+            lastMove = move;
+            if (readPause && !closedHelp && pauseAction.WasPressedThisFrame()) runner.TogglePause();
+        }
+
+        /// <summary>
+        /// 停止中の閲覧の入力（T404）。? / H で閲覧パネルの開閉、数字キーと召喚カードのクリックで見る味方の種類、Tab とフィールドのクリックで配置済みの味方を選ぶ
+        /// （パネルが開いている間は ← → で種類を切り替える）。Esc / 右クリックはパネルが開いていれば閉じるだけで、再開しない。閉じたら true。
+        /// readKeys が false のフレーム（このフレームのキーで停止した）は、キーを読まない。
+        /// </summary>
+        private bool PollView(bool readKeys, Vector2 move)
+        {
+            var closed = false;
+            if (readKeys)
+            {
+                if (helpAction.WasPressedThisFrame()) help.Toggle();
+                if (cancelAction.WasPressedThisFrame() && help.IsOpen)
+                {
+                    help.Close();
+                    closed = true;
+                }
+                var shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+                var count = runner.Units.Units.Count;
+                for (var i = 0; i < MaxIcons && i < count; i++)
+                    if (!shift && summonActions[i].WasPressedThisFrame()) ViewUnit(i);
+                if (cycleAction.WasPressedThisFrame() && selection.Cycle(runner.Board)) ApplySelectionChange();
+                var dx = Edge(move.x, lastMove.x);
+                if (dx != 0 && help.IsOpen)
+                {
+                    ClearSelection();
+                    help.StepFocus(dx);
+                }
+            }
+
+            // フィールドのクリックで味方を選ぶ（「?」の上・開いているパネルの上は除く）
+            var pointer = pointAction.ReadValue<Vector2>();
+            var overField = battleCamera.pixelRect.Contains(pointer) && !help.Contains(pointer);
+            if (pressAction.WasPressedThisFrame()) clickArmed = overField && !help.IsOpen;
+            if (pressAction.WasReleasedThisFrame())
+            {
+                if (clickArmed && overField) ClickField(pointer);
+                clickArmed = false;
+            }
+            return closed;
+        }
+
+        /// <summary>見る味方の種類を index にする（召喚カード・数字キー）。配置済みの味方の選択は外す。</summary>
+        private void ViewUnit(int index)
+        {
+            ClearSelection();
+            help.SetFocus(index);
+        }
+
+        /// <summary>選択した配置済みの味方と同じ種類を、見ている種類にする。</summary>
+        private void FocusSelectedType()
+        {
+            if (help == null || !selection.HasSelection) return;
+            var units = runner.Units.Units;
+            for (var i = 0; i < units.Count; i++)
+            {
+                if (units[i].Id != selection.Selected.Def.Id) continue;
+                help.SetFocus(i);
+                return;
+            }
         }
 
         private bool EnsureBound()
@@ -231,6 +312,12 @@ namespace UnitySlotTower.Runtime
         private void OnIconPressed(int index)
         {
             if (controller == null) return;
+            // 停止中は召喚の選択はできない。閲覧用に見る種類だけ変える（T404）
+            if (runner.IsPaused)
+            {
+                if (help != null && help.IsAvailable) ViewUnit(index);
+                return;
+            }
             controller.SelectByIcon(index);
         }
 
@@ -276,6 +363,7 @@ namespace UnitySlotTower.Runtime
             {
                 runner.ShowRange(selection.Selected);
                 selectionRangeShown = true;
+                if (runner.IsPaused) FocusSelectedType();
             }
             else
             {
@@ -465,6 +553,9 @@ namespace UnitySlotTower.Runtime
         {
             var units = runner.Units.Units;
             var selected = controller.SelectedUnit;
+            // 停止中のカードの枠は、閲覧で見ている種類
+            var paused = runner.IsPaused;
+            var viewFocus = help != null ? help.FocusIndex : HelpPanelState.NoFocus;
             for (var i = 0; i < icons.Length && i < units.Count; i++)
             {
                 var unit = units[i];
@@ -475,7 +566,8 @@ namespace UnitySlotTower.Runtime
                 var stock = runner.Flow != null ? runner.Flow.GetStock(unit.Id) : 0;
                 var upgradeCost = runner.Upgrades.GetNextCost(unit.Id);
                 var upgradeAffordable = upgradeCost >= 0 && !runner.IsPaused && runner.Wallet.CanAfford(upgradeCost);
-                icons[i].Refresh(availability, ratio, selected != null && ReferenceEquals(selected, unit), stock, runner.Upgrades.GetLevel(unit.Id),
+                var isSelected = paused ? i == viewFocus : selected != null && ReferenceEquals(selected, unit);
+                icons[i].Refresh(availability, ratio, isSelected, stock, runner.Upgrades.GetLevel(unit.Id),
                     upgradeCost, upgradeAffordable);
             }
 

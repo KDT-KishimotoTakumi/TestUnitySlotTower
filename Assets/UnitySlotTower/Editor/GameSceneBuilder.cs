@@ -224,6 +224,8 @@ namespace UnitySlotTower.EditorTools
             CreatePlacementUi(operationBar, runner, field, battleCamera, CreateRetreatView(battleArea));
             CreateOperationBar(operationBar, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
             CreatePauseOverlay(battleArea, runner);
+            CreateHelpOverlay(battleArea, runner, cabinet, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
+            CreateTutorialOverlay((RectTransform)battleArea.parent, runner, field, battleCamera, operationBar, slotArea);
             // 結果画面は最後（いちばん手前）に置く
             CreateResultOverlay((RectTransform)battleArea.parent, runner, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath));
 

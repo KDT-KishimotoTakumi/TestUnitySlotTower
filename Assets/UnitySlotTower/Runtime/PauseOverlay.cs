@@ -19,8 +19,8 @@ namespace UnitySlotTower.Runtime
         private void Update()
         {
             if (runner == null || content == null) return;
-            // 結果画面が出ている間は一時停止の印を重ねない
-            var paused = runner.IsPaused && !runner.IsEnded ? 1 : 0;
+            // 結果画面・チュートリアルが出ている間は一時停止の印を重ねない
+            var paused = runner.IsPaused && !runner.IsEnded && !runner.IsTutorialHold ? 1 : 0;
             if (paused == shown) return;
             shown = paused;
             content.SetActive(paused == 1);

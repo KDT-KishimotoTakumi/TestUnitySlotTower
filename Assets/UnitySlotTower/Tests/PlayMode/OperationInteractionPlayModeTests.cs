@@ -346,7 +346,7 @@ namespace UnitySlotTower.Tests
             yield return Tap(keyboard.tabKey);
             yield return Tap(keyboard.xKey);
             yield return ClickAt(CellScreen(GroundCell));
-            Assert.IsFalse(retreatView.IsShown, "停止中は選択できない");
+            Assert.IsFalse(retreatView.IsShown, "停止中は撤退の板が出ない");
             Assert.IsNotNull(runner.Board.GetAt(GroundCell), "停止中は撤退できない");
         }
 

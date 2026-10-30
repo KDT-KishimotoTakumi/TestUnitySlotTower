@@ -1059,6 +1059,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Help",
+                    "type": "Button",
+                    "id": "5b1c7e0a-2f64-4c1d-9a3e-7d84f0a6c1b2",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "SlotLever",
                     "type": "Button",
                     "id": "71550aed-3917-48df-af67-a456602c0cd9",
@@ -1353,6 +1362,28 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Retreat",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a9d3f6b4-8e21-4a57-b0c3-1e5f7a2d9c64",
+                    "path": "<Keyboard>/h",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Help",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c42e8a17-5d90-4b36-8f1a-3b6d0e7f2a85",
+                    "path": "<Keyboard>/slash",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Help",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

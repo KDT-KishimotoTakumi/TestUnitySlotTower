@@ -15,6 +15,7 @@ namespace UnitySlotTower.Tests
     {
         private const string ProjectFolder = "Assets/UnitySlotTower";
         private const string TitleSceneName = "Title";
+        private const string TitleLogoName = "Logo";
         private const string OtherFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
 
         private static TMP_FontAsset DigitFont => AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DigitFontSetup.FontAssetPath);
@@ -115,7 +116,14 @@ namespace UnitySlotTower.Tests
                 if (!alreadyOpen) scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
                 try
                 {
-                    if (scene.name == TitleSceneName) continue;
+                    if (scene.name == TitleSceneName)
+                    {
+                        // Title はロゴだけ別フォントで文字を使える。それ以外（▶・難易度プレート）は他の画面と同じ規則
+                        foreach (var root in scene.GetRootGameObjects())
+                            foreach (var v in TextRuleScanner.FindViolations(root, font))
+                                if (!v.Contains("/" + TitleLogoName + ":")) violations.Add($"{path}: {v}");
+                        continue;
+                    }
                     foreach (var root in scene.GetRootGameObjects())
                         foreach (var v in TextRuleScanner.FindViolations(root, font)) violations.Add($"{path}: {v}");
                 }

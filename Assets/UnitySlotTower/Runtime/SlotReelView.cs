@@ -36,7 +36,7 @@ namespace UnitySlotTower.Runtime
                 var symbol = reels[reel, Mod(j - PaddingCells, SlotLayout.ReelSize)];
                 cellImages[j].color = ColorOf(symbol);
                 cellLabels[j].text = LabelOf(symbol);
-                cellLabels[j].color = symbol == SlotSymbol.Bell ? DarkText : Color.white;
+                cellLabels[j].color = LabelColorOf(symbol);
             }
         }
 
@@ -61,7 +61,9 @@ namespace UnitySlotTower.Runtime
 
         private static int Mod(int value, int size) => ((value % size) + size) % size;
 
-        private static Color ColorOf(SlotSymbol symbol)
+        public static Color LabelColorOf(SlotSymbol symbol) => symbol == SlotSymbol.Bell ? DarkText : Color.white;
+
+        public static Color ColorOf(SlotSymbol symbol)
         {
             switch (symbol)
             {
@@ -75,7 +77,7 @@ namespace UnitySlotTower.Runtime
         }
 
         // 数字・記号だけ（AllowedText）。図柄の区別は主に色で行う。
-        private static string LabelOf(SlotSymbol symbol)
+        public static string LabelOf(SlotSymbol symbol)
         {
             switch (symbol)
             {

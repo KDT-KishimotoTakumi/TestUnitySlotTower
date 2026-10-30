@@ -56,10 +56,10 @@
 
 - [x] T401 (FR-005) `Title` シーン（ロゴのみ文字可）と難易度選択（設定1〜6） — 検証: PlayMode テスト（AC-004） — 2026-10-31 `Title` シーン（ロゴ「SLOT TOWER」、▶、設定1〜6のプレート、`TitleView`）、`GameSession.Difficulty` → `SlotCabinetView` の設定。Enter/Space・数字1〜6・Esc 対応。`GameFlowPlayModeTests`（PlayMode 46 件成功）、画像 `Artifacts/Automation/Editor/m4-title.png`・`m4-select.png`
 - [x] T402 (FR-005) リザルト（クリア／ゲームオーバーをアイコンと数字で表示）、リトライ、タイトルへ戻る — 検証: PlayMode テスト（リトライで初期化: AC-004） — 2026-10-31 結果の判定 `GameOutcomeJudge`（EditMode `GameFlowTests`）と Game 内の `ResultView`（★/×、到達ウェーブ、難易度、↻ リトライ、⌂ タイトル。Enter=リトライ、Esc=タイトル）。結果が決まると全体が止まり再開不可。リトライで財布・ライフ・盤面が初期化されることを `Retry_ReloadsGameWithInitialStateAndSameDifficulty` で確認（EditMode 378 / PlayMode 46 件成功）、画像 `m4-result.png`。クリア側（★）の実画面は未確認（判定は EditMode のみ）
-- [ ] T403 (FR-004) 文字なし説明（薄暗いオーバーレイ、矢印・手のアニメ、初回のみ表示）を召喚・配置・向き・スロット・ボーナス・強化・撤退に付ける — 検証: 手動プレイ、第三者確認（AC-003）
-- [ ] T404 (FR-012) 一時停止中の「?」: 役の図柄＝配当の早見表、味方の範囲図と数値 — 検証: Editor 画像、文字チェックテスト
-- [ ] T405 (FR-002) キーボードだけ・マウスだけで1ウェーブ通せることの確認と不足操作の補完 — 検証: PlayMode テスト＋手動（AC-002）
-- [ ] T406 (FR-003) 全画面の文字チェックと縦長レイアウトの画像確認 — 検証: 文字チェックテスト、Editor 画像（AC-001）
+- [x] T403 (FR-004) 文字なし説明（薄暗いオーバーレイ、矢印・手のアニメ、初回のみ表示）を召喚・配置・向き・スロット・ボーナス・強化・撤退に付ける — 検証: 手動プレイ、第三者確認（AC-003） — 2026-10-31 実装・自動テスト済み（`TutorialFlow`/`TutorialView`、7ステップ、決定/クリックで次へ・Escで全スキップ、PlayerPrefs `UnitySlotTower.TutorialSeen`、表示中は共有一時停止で全体停止）。EditMode 387 / PlayMode 54 件成功、画像 `Artifacts/Automation/Editor/tutorial_step0〜6.png`。**手動プレイと第三者確認（AC-003）は未**
+- [x] T404 (FR-012) 一時停止中の「?」: 役の図柄＝配当の早見表、味方の範囲図と数値 — 検証: Editor 画像、文字チェックテスト — 2026-10-31 `Core/Help`（PayoutGuide・RangeDiagram・UnitGuide・HelpPanelState）、`HelpView`。「?」/H・/ /Esc/×で開閉、停止中だけ閲覧用の選択可（配置・強化・撤退・スロット等は拒否のまま）。入力アクション `Game/Help` 追加。EditMode 401 / PlayMode 66 件成功、画像 `Artifacts/Automation/Editor/t404-panel.png`・`t404-paused-selected.png`。表示は基準値（強化レベル非反映）、攻撃間隔は0.1秒単位の整数。**手動確認・16:9以外は未**
+- [x] T405 (FR-002) キーボードだけ・マウスだけで1ウェーブ通せることの確認と不足操作の補完 — 検証: PlayMode テスト＋手動（AC-002） — 2026-10-31 `InputCompletenessPlayModeTests`（キーボードのみ／マウスのみで 開始→配置→スロット→強化→撤退→一時停止→BGM 音量→ウェーブ終了。不足していた操作はなく補完なし）。PlayMode 48 件成功。手動確認は未
+- [x] T406 (FR-003) 全画面の文字チェックと縦長レイアウトの画像確認 — 検証: 文字チェックテスト、Editor 画像（AC-001） — 2026-10-31 文字チェック: `TextRuleTests`（Title も Logo 以外を検査）＋`TextRulePlayModeTests`（実描画の文字: 通常・一時停止・「?」・結果ゲームオーバー・スロット3状態・チュートリアル全ステップ・Title/選択）。EditMode 401 / PlayMode 70 件成功。画像: 16:9・16:10・4:3・21:9 で崩れなし（Game は16:9固定の黒帯、Title は全面）、`Artifacts/Automation/Editor/t406_*.png`。**画面は横長 16:9 で確定（ユーザー決定 2026-10-31、縦長対応はしない）。spec.md/plan.md の「縦長 9:16」記述は未改訂（再承認待ち）。クリア★結果画面と実機は未確認**
 
 ## M5 仕上げ
 

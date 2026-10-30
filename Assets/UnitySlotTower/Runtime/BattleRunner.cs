@@ -91,8 +91,12 @@ namespace UnitySlotTower.Runtime
         public PauseState Pause { get; private set; }
         /// <summary>一時停止中か（FR-012）。Start 前は false。</summary>
         public bool IsPaused => Pause != null && Pause.IsPaused;
+        /// <summary>チュートリアルが全体を止めている間は true（<see cref="SetTutorialHold"/>）。</summary>
+        public bool IsTutorialHold { get; private set; }
         /// <summary>味方の表（行の順が召喚アイコン・数字キーの順）。Start 前は null。</summary>
         public UnitTable Units => unitTable;
+        /// <summary>味方ごとの攻撃範囲の表（閲覧用の範囲図に使う）。Start 前は null。</summary>
+        public UnitRangeTable UnitRanges => tables?.UnitRanges;
 
         private void Awake()
         {
@@ -209,14 +213,28 @@ namespace UnitySlotTower.Runtime
         /// <summary>一時停止を切り替える（FR-012）。停止中は戦闘・召喚の待ち時間・ウェーブ進行・スロットの時間が進まない。Start 前は何もしない。</summary>
         public void SetPaused(bool paused)
         {
-            if (Pause == null || IsEnded) return;
+            if (Pause == null || IsEnded || IsTutorialHold) return;
             Pause.SetPaused(paused);
         }
 
-        /// <summary>一時停止と再開を切り替える（Esc / P、ポーズボタンの入口）。切り替え後に停止中なら true。Start 前は false。</summary>
+        /// <summary>一時停止と再開を切り替える（Esc / P、ポーズボタンの入口）。切り替え後に停止中なら true。Start 前は false。チュートリアル中は切り替えず、停止中（true）のまま。</summary>
         public bool TogglePause()
         {
-            return Pause != null && !IsEnded && Pause.Toggle();
+            if (Pause == null || IsEnded) return false;
+            if (IsTutorialHold) return true;
+            return Pause.Toggle();
+        }
+
+        /// <summary>
+        /// チュートリアル表示中の停止（T403、FR-004）。true で全体を止め（共有の PauseState。配置・スロット等の操作は一時停止と同じ理由で拒否される）、
+        /// 表示中はプレイヤーの一時停止の切り替え（Esc / P / ❚❚）を受け付けない。false で停止を解く。結果が決まったあとは解かない。Start 前は何もしない。
+        /// </summary>
+        public void SetTutorialHold(bool hold)
+        {
+            if (Pause == null) return;
+            IsTutorialHold = hold;
+            if (hold) Pause.SetPaused(true);
+            else if (!IsEnded) Pause.SetPaused(false);
         }
 
         private void Update()

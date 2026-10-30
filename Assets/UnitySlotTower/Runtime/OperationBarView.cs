@@ -173,7 +173,7 @@ namespace UnitySlotTower.Runtime
 
         // ---- 図形（x, y は -1〜1、y は上向き） ----
 
-        private static bool Heart(float x, float y)
+        public static bool Heart(float x, float y)
         {
             var u = x * 1.15f;
             var v = y * 1.15f + 0.12f;
@@ -181,7 +181,7 @@ namespace UnitySlotTower.Runtime
             return a * a * a - u * u * v * v * v <= 0f;
         }
 
-        private static bool Coin(float x, float y)
+        public static bool Coin(float x, float y)
         {
             var r = Mathf.Sqrt(x * x + y * y);
             return r <= 1f && (r < 0.62f || r > 0.72f);

@@ -29,6 +29,7 @@ namespace UnitySlotTower.Tests
                 { "CursorMove", new[] { "<Keyboard>/upArrow", "<Keyboard>/downArrow", "<Keyboard>/leftArrow", "<Keyboard>/rightArrow" } },
                 { "CycleSelection", new[] { "<Keyboard>/tab" } },
                 { "Retreat", new[] { "<Keyboard>/x" } },
+                { "Help", new[] { "<Keyboard>/h", "<Keyboard>/slash" } },
                 { "SlotLever", new[] { "<Keyboard>/space" } },
                 { "Pause", new[] { "<Keyboard>/p", "<Keyboard>/escape" } },
                 { "MenuConfirm", new[] { "<Keyboard>/enter", "<Keyboard>/numpadEnter", "<Keyboard>/space" } },
