@@ -24,8 +24,8 @@ namespace UnitySlotTower.Tests
         public void Config_HasInitialCharacterAndSlotCoins()
         {
             var config = TableSet.Load(TableTests.ReadFile).GameConfig;
-            Assert.AreEqual(1000, config.InitialCoins);
-            Assert.AreEqual(500, config.InitialSlotCoins);
+            Assert.AreEqual(250, config.InitialCoins);
+            Assert.AreEqual(250, config.InitialSlotCoins);
         }
 
         // ---- AC-102 スロット ----

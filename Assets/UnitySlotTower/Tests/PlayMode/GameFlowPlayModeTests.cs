@@ -15,9 +15,9 @@ namespace UnitySlotTower.Tests
     {
         private const int MaxStartupFrames = 60;
         private const int LethalDamage = 1000;
-        private const int InitialCoins = 1000;
-        private const int InitialSlotCoins = 500;
-        private const int SpentCoins = 300;
+        private const int InitialCoins = 250;
+        private const int InitialSlotCoins = 250;
+        private const int SpentCoins = 100;
         private const int SpentSlotCoins = 120;
 
         private Keyboard keyboard;

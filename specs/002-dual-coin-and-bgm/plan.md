@@ -10,14 +10,14 @@
 ## 影響するファイル
 | 区分 | ファイル |
 | --- | --- |
-| データ | `Data/Tables/game_config.csv`（`initial_coins`=1000、`initial_slot_coins`=500）、`Core/Data/GameConfig.cs`、`TableValidator.cs`（掛け金とスロットコインの検査） |
+| データ | `Data/Tables/game_config.csv`（`initial_coins`=250、`initial_slot_coins`=250）、`Core/Data/GameConfig.cs`、`TableValidator.cs`（掛け金とスロットコインの検査） |
 | Core | `Core/Slot/SlotMachine.cs`、`Core/Combat/BattleSimulation.cs`・`WaveFlow.cs`、`Core/Audio/BgmVolume.cs`（新規） |
 | Runtime | `SlotCabinetView.cs`（`SlotWallet`、表示はスロットコイン、銀色）、`BattleRunner.cs`（`SlotWallet`）、`BgmPlayer.cs`（新規）、`ToneSynth.cs`（`CreateLoop`） |
 | Editor | `GameSceneBuilder.cs`（スピーカーと音量の数字、配置数・▶❚❚ の段の再配置）、`Game.unity` を再生成 |
 | 入力 | `InputSystem_Actions.inputactions`（Game マップに `BgmVolumeUp`=`=`/テンキー+、`BgmVolumeDown`=`-`/テンキー-） |
 
 ## 表示（FR-107）
-- 左下の操作バー: キャラクターコイン（金の丸、1000 から）。スロット筐体の信用表示: スロットコイン（銀の四角、500 から）。払い出し表示はキャラクターコインへの加算額。
+- 左下の操作バー: キャラクターコイン（金の丸、250 から）。スロット筐体の信用表示: スロットコイン（銀の四角、250 から）。払い出し表示はキャラクターコインへの加算額。
 
 ## リスク
 - 収入がスロットの払い出しに偏る（経済バランスは仮置き。T309 で調整）。
